@@ -1,2 +1,2 @@
-# Inform-tica-
-Probando 123
+# Informatica
+print("hola")
