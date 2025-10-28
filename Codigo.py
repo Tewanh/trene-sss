@@ -1,7 +1,8 @@
 import tkinter as tk
+from tkinter import ttk, messagebox
 
-simulacion = tk.Tk() #Crea una ventana#
-app.configure(background="black")#pantalla (color:negro)#
+pantalla = tk.Tk() #Crea una ventana#
+pantalla.configure(background="black")#pantalla (color:negro)#
 tk.Wm.wm_title(simulacion, "Prueba")#pantalla(nombre:Prueba)#
 
 simulacion.mainloop()
