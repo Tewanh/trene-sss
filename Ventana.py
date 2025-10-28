@@ -1,1 +1,2 @@
 #PONER CONFIGURACIONES DE PANTALLA#
+import Tkinter as tk
