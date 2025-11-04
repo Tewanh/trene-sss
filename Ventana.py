@@ -16,10 +16,12 @@ def main():
   #4 Crear menus desplegables
   menu_archivo = tk.Menu(barra_menu)
   menu_ayuda = tk.Menu(barra_menu)
+  menu_guardado = tk.Menu(barra_menu)
   
   #5 Agregar menus desplegables a la barra de menu
   barra_menu.add_cascade(label="Archivo", menu=menu_archivo)
   barra_menu.add_cascade(label="Ayuda", menu=menu_ayuda)
+  barra_menu.add_cascade(label="Guardar/Cargar", menu=menu_guardado)
   
   #6 Agregar la "LOGICA" a los botones
   #Menu Archivo
@@ -47,7 +49,7 @@ def mostrar_error():
   messagebox.showerror("Error", "¡Ha ocurrido un error inesperado!")
   
 
-if _name_ = "_main_":
+if "_main_" == "_main_":
   main()
 
 
