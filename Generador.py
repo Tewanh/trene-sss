@@ -1,7 +1,9 @@
 import Tkinter as tk
 import datetime as dt
 import random
-from 
+from abc import ABC, abstractmethod  # ABSTRACT
+from collections.abc import Callable
+from typing import Any
 
 Horas= dt.time(20,0).hour - dt.time(7,0).hour
 Minutos= Horas * 60
