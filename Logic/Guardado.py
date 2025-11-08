@@ -1,8 +1,8 @@
-class guardado:
+class Guardado:
 
-def guardar_simulacion ():
+  def guardar_simulacion ():
 
 
 
-def cargar_simulacion ():
+  def cargar_simulacion ():
 
