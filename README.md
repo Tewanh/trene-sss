@@ -13,7 +13,7 @@ Integrantes
 
 Ricardo Torres, Heidi Santisteban, Nestor Sepulveda, Dalma Redoles.
  
-Indicadores del sistema
+Indicadores del sistema.
 
 1. Flujo de Pasajeros Transportados:
   Mide la cantidad total de personas que completan su viaje durante el día. Permite al operario evaluar la eficiencia del sistema y detectar cuellos de botella.
