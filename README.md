@@ -1,5 +1,5 @@
 Proyecto Ferrodiario 
-
+p
 Resumen y contexto del proyecto 
 
 Este proyecto corresponde al desarrollo del Sistema de Simulación de Tráfico Ferroviario, cuyo propósito es representar de forma controlada el funcionamiento del sistema ferroviario nacional.  
