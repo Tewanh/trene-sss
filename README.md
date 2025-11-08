@@ -24,4 +24,4 @@ Ricardo Torres, Heidi Santisteban, Nestor Sepulveda, Dalma Redoles.
 
 # persistencia de datos.
 
-dentro del codigo existira una carpeta vacia a la cual el programa se encargara de dirigir los datos requeridos, y a su vez cuando el usuario quiera cargar los datos guardados hara que el programa se diriga a la carpeta donde estan los datos guardados y los va a mostrar en pantalla.
+Dentro del codigo existira una carpeta vacia a la cual el programa se encargara de dirigir los datos requeridos, y a su vez cuando el usuario quiera cargar los datos guardados hara que el programa se diriga a la carpeta donde estan los datos guardados y los va a mostrar en pantalla.
