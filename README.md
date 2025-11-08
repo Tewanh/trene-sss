@@ -1,4 +1,4 @@
-Proyecto Ferrodiario
+# Proyecto Ferrodiario
 
 Resumen y contexto del proyecto 
 
@@ -9,14 +9,19 @@ Su objetivo principal es permitir al operario tomar decisiones que mejoren la ef
 Durante la simulación, los trenes se desplazan entre estaciones con capacidad y velocidad configurables, mientras los usuarios son generados de forma aleatoria según la población de cada estación.  
 El sistema gestiona eventos como llegadas, esperas o giros de trenes, manteniendo un Estado de Simulación persistente que puede ser guardado, cargado o restaurado en diferentes momentos del día.
 
-Integrantes
+# Integrantes
 
 Ricardo Torres, Heidi Santisteban, Nestor Sepulveda, Dalma Redoles.
  
-Indicadores del sistema.
+# Indicadores del sistema.
 
 1. Flujo de Pasajeros Transportados:
   Mide la cantidad total de personas que completan su viaje durante el día. Permite al operario evaluar la eficiencia del sistema y detectar cuellos de botella.
 
 2. Tasa de Ocupación Promedio:
    Representa el porcentaje promedio de ocupación de los trenes. Un valor alto indica buen uso de recursos; un valor bajo sugiere exceso de trenes o baja demanda.
+
+
+# persistencia de datos.
+
+dentro del codigo existira una carpeta vacia a la cual el programa se encargara de dirigir los datos requeridos, y a su vez cuando el usuario quiera cargar los datos guardados hara que el programa se diriga a la carpeta donde estan los datos guardados y los va a mostrar en pantalla.
