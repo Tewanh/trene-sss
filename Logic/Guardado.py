@@ -1,4 +1,4 @@
-class 
+class guardado:
 
 def guardar_simulacion ():
 
