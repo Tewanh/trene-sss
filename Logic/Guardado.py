@@ -1,43 +1,44 @@
-import tkinter as tk
-from tkinter import filedialog
+import json
+from tkinter import filedialog, messagebox
 
-class Guardado:
-
-  def guardar_simulacion ():
-   # 1. Abrir diálogo de guardado
-    # asksaveasfilename devuelve la ruta completa del archivo
-    ruta_archivo = filedialog.asksaveasfilename(
-        defaultextension=".txt", # Extensión predeterminada
-        filetypes=[("Archivos de texto", "*.txt"), ("Todos los archivos", "*.*")]
+def guardar_datos(datos, ventana_principal):
+    """
+    Guarda los datos en un archivo JSON seleccionado por el usuario.
+    """
+    archivo_destino = filedialog.asksaveasfilename(
+        parent=ventana_principal,
+        defaultextension=".json",
+        filetypes=[("Archivos JSON", "*.json"), ("Todos los archivos", "*.*")]
     )
     
-    # Si el usuario cancela, ruta_archivo será una cadena vacía
-    if not ruta_archivo:
+    if not archivo_destino:
         return
-
-    # 2. Obtener el texto del widget de entrada
-    contenido = texto_entrada.get("1.0", tk.END) # Para un widget Text
-
-    # 3. Escribir el contenido en el archivo
+    
     try:
-        with open(ruta_archivo, 'w') as archivo:
-            archivo.write(contenido)
-        print(f"Archivo guardado en: {ruta_archivo}")
+        with open(archivo_destino, 'w') as archivo:
+            json.dump(datos, archivo, indent=4)
+        messagebox.showinfo("Guardado", f"Datos guardados exitosamente.")
     except Exception as e:
-        print(f"Error al guardar el archivo: {e}")
+        messagebox.showerror("Error de guardado", f"No se pudieron guardar los datos: {e}")
 
-# --- Widget de entrada de texto ---
-# Se recomienda usar el widget Text para texto largo
-texto_entrada = tk.Text(ventana, height=10, width=50)
-texto_entrada.pack(pady=10)
-
-# --- Botón para guardar ---
-boton_guardar = tk.Button(ventana, text="Guardar", command=guardar_archivo)
-boton_guardar.pack(pady=5)
-
-ventana.mainloop()
-
-
-
-  def cargar_simulacion ():
-
+def cargar_datos(ventana_principal):
+    """
+    Carga datos desde un archivo JSON seleccionado por el usuario.
+    Retorna los datos cargados o None si hubo un error/cancelación.
+    """
+    archivo_origen = filedialog.askopenfilename(
+        parent=ventana_principal,
+        filetypes=[("Archivos JSON", "*.json"), ("Todos los archivos", "*.*")]
+    )
+    
+    if not archivo_origen:
+        return None
+    
+    try:
+        with open(archivo_origen, 'r') as archivo:
+            datos = json.load(archivo)
+        messagebox.showinfo("Cargado", f"Datos cargados exitosamente.")
+        return datos
+    except Exception as e:
+        messagebox.showerror("Error de carga", f"No se pudieron cargar los datos: {e}")
+        return None
