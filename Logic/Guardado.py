@@ -19,10 +19,6 @@ def guardar_datos(datos, ventana_principal):
         messagebox.showerror("Error de guardado", f"No se pudieron guardar los datos: {e}")
 
 def cargar_datos(ventana_principal):
-    """
-    Carga datos desde un archivo JSON seleccionado por el usuario.
-    Retorna los datos cargados o None si hubo un error/cancelación.
-    """
     archivo_origen = filedialog.askopenfilename(
         parent=ventana_principal,
         filetypes=[("Archivos JSON", "*.json"), ("Todos los archivos", "*.*")]
