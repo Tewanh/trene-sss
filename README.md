@@ -22,6 +22,8 @@ Ricardo Torres, Heidi Santisteban, Nestor Sepulveda, Dalma Redoles.
    Representa el porcentaje promedio de ocupación de los trenes. Un valor alto indica buen uso de recursos; un valor bajo sugiere exceso de trenes o baja demanda.
 
 
-# persistencia de datos.
+# Persistencia de datos.
 
 Dentro del codigo existira una carpeta vacia a la cual el programa se encargara de dirigir los datos requeridos, y a su vez cuando el usuario quiera cargar los datos guardados hara que el programa se diriga a la carpeta donde estan los datos guardados y los va a mostrar en pantalla. con la funcion (ask save) as (askname) se usara una funcion que hace que el usuario elige la funcion y como guardarla, en que formato se guarda y si quiere abrir el archivo usa la funcion open.
+
+# Archivos pricipales 
