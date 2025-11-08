@@ -2,9 +2,6 @@ import json
 from tkinter import filedialog, messagebox
 
 def guardar_datos(datos, ventana_principal):
-    """
-    Guarda los datos en un archivo JSON seleccionado por el usuario.
-    """
     archivo_destino = filedialog.asksaveasfilename(
         parent=ventana_principal,
         defaultextension=".json",
