@@ -1,6 +1,6 @@
 import json
 from tkinter import filedialog, messagebox
-
+class Guardado:
 def guardar_datos(datos, ventana_principal):
     archivo_destino = filedialog.asksaveasfilename(
         parent=ventana_principal,
