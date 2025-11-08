@@ -1,3 +1,10 @@
+import Tkinter as tk
+import datetime as dt
+import random
+from abc import ABC, abstractmethod  # ABSTRACT
+from collections.abc import Callable
+from typing import Any
+
 class Generador:
   def _init_(self, hora_inicio: dt.datetime, hora_final: dt.datetime):
     def _init_ (
