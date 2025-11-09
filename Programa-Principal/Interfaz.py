@@ -49,5 +49,5 @@ def mostrar_error():
   messagebox.showerror("Error", "¡Ha ocurrido un error inesperado!")
   
 
-if "_main_" == "_main_":
+if "__name__" == "__main__":
   main()
