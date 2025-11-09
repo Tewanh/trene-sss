@@ -14,8 +14,8 @@ class Generador:
   def _init_(self, hora_inicio: dt.datetime, hora_final: dt.datetime):
     def _init_ (
       self,
-      poblaciuon: int,
-      seed=1234;
+      poblacion: int,
+      seed=1234,
       fecha_inicial: date.datetime = dt:datetime (2025,1,1),
       hora_apertura: dt.time = date.time(7,0),
       hora_cierre: dt.time = dt.time(20,0),
