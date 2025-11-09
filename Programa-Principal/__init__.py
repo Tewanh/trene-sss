@@ -1,1 +1,1 @@
-from .Ui import .Interfaz 
+from .Ui import .Interfaz main, mostrar_info
