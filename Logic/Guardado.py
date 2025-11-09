@@ -1,6 +1,6 @@
 import json
-from tkinter import filedialog, messagebox
-class Guardado:
+from tkinter import filedialog, messagebox, Menu
+
 def guardar_datos(datos, ventana_principal):
     archivo_destino = filedialog.asksaveasfilename(
         parent=ventana_principal,
@@ -35,3 +35,22 @@ def cargar_datos(ventana_principal):
     except Exception as e:
         messagebox.showerror("Error de carga", f"No se pudieron cargar los datos: {e}")
         return None
+
+def crear_menu_archivo(root, menubar, datos_funcion):
+    """
+    Añade una cascada 'Archivo' al menubar de tkinter.
+    - root: la ventana principal de tkinter
+    - menubar: el Menu principal de tkinter (Menu(root))
+    - datos_funcion: función/callback que devuelve los datos actuales a guardar
+    """
+    archivo_menu = Menu(menubar, tearoff=0)
+    
+    archivo_menu.add_command(
+        label="Guardar", 
+        command=lambda: guardar_datos(datos_funcion(), root)
+    )
+    archivo_menu.add_command(
+        label="Cargar", 
+        command=lambda: cargar_datos(root)
+    )
+    menubar.add_cascade(label="Archivo", menu=archivo_menu)
