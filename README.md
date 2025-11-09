@@ -27,3 +27,23 @@ Ricardo Torres, Heidi Santisteban, Nestor Sepulveda, Dalma Redoles.
 Dentro del codigo existira una carpeta vacia a la cual el programa se encargara de dirigir los datos requeridos, y a su vez cuando el usuario quiera cargar los datos guardados hara que el programa se diriga a la carpeta donde estan los datos guardados y los va a mostrar en pantalla. con la funcion (ask save) as (askname) se usara una funcion que hace que el usuario elige la funcion y como guardarla, en que formato se guarda y si quiere abrir el archivo usa la funcion open.
 
 # Archivos pricipales 
+
+Si usas Visual Studio Code (VS Code)
+Abre la carpeta completa del proyecto (por ejemplo, proyecto_simulacion/) desde Archivo → Abrir carpeta. 
+En el Explorador de archivos de VS Code, selecciona el archivo principal — por ejemplo, main.py.
+Asegúrate de tener seleccionado el intérprete de Python correcto (abajo a la derecha).
+
+Ejecuta el archivo presionando:
+“Run Python File” (botón arriba a la derecha), o
+Usa el atajo Ctrl + F5 (sin depuración) o F5 (con depuración).
+Esto correrá el bloque if __name__ == "__main__": automáticamente.
+
+Si usas la terminal de Python directamente
+Abre una terminal o consola (CMD, PowerShell o terminal de VS Code).
+Posiciónate en la carpeta del proyecto, por ejemplo:
+cd ruta/del/proyecto_simulacion
+
+Ejecuta el archivo principal:
+python main.py
+Si quieres ejecutar otro módulo con __main__, entra a su carpeta y corre:
+python ventana_gestion.py
