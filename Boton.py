@@ -1,1 +1,0 @@
-#AJUSTES DE X BOTON#
