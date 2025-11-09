@@ -5,12 +5,11 @@ from abc import ABC, abstractmethod  # ABSTRACT
 from collections.abc import Callable
 from typing import Any
 
-Horas= dt.time(20,0).hour - dt.time(7,0).hour
-Minutos= Horas * 60
-print(Minutos)
-CPM = self.poblacion * 0.2/Minutos
-
 class Generador:
+  Horas= dt.time(20,0).hour - dt.time(7,0).hour
+  Minutos= Horas * 60
+  print(Minutos)
+  CPM = self.poblacion * 0.2/Minutos
   def _init_(self, hora_inicio: dt.datetime, hora_final: dt.datetime):
     def _init_ (
       self,
