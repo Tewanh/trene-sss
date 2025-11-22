@@ -1,133 +1,185 @@
 # -- Imports -- #
 import tkinter as tk
-from tkinter import messagebox, Toplevel, Button
-from datetime import datetime, timedelta
-# Importamos la clase Estacion desde Models
-from Models.Estaciones import Estacion 
-# Importamos desde las carpetas logic y ui
+from tkinter import messagebox, Menu, Canvas, Button, Frame, Label, NW
+from Logic.Guardado import guardar_datos, cargar_datos
 from Logic.EstadoDeSimulacion import EstadoSimulacion
-from Ui.eventos_ui import crear_ventana_eventos 
+from datetime import datetime, timedelta
+import locale
 
-# Variables globales para simplificar el acceso en este ejemplo
+# Variables globales
 app_ventana = None
 estado_simulacion_instance = None
-btn_avanzar_hora = None
-btn_iniciar_sim = None
-estaciones_list = [] # Lista global para almacenar las instancias de las estaciones
+simulacion_frame = None
+lateral_frame = None
+menu_archivo_contextual = None 
+canvas_vias = None 
+btn_siguiente_turno = None
+frame_reloj_contenedor = None 
 
-# --- Funciones de Lógica de Estado ---
-# (obtener_estado_actual y aplicar_estado_cargado permanecen sin cambios)
+# --- Funciones de Lógica de UI ---
 
-def obtener_estado_actual():
-    if estado_simulacion_instance:
-        return {
-            "tiempo_actual_simulado": estado_simulacion_instance.tiempo_actual_simulado.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-    return {}
+def dibujar_vias_y_estaciones(canvas: Canvas):
+    canvas.delete("all")
+    canvas_width = canvas.winfo_width()
+    canvas_height = canvas.winfo_height()
+    
+    via_y = canvas_height / 2
+    canvas.create_line(50, via_y, canvas_width - 50, via_y, fill="#555", width=5)
+    
+    estaciones_nombres = ["Estación A", "Estación B", "Estación C", "Estación D"]
+    posiciones_x = [100, 300, 500, 700]
 
-def aplicar_estado_cargado(datos_cargados):
+    for i, x in enumerate(posiciones_x):
+        if x < (canvas_width - 20) and x > 20: 
+            canvas.create_rectangle(x-15, via_y-10, x+15, via_y+10, fill="red", outline="black")
+            canvas.create_text(x, via_y + 25, text=estaciones_nombres[i], font=("Helvetica", 8))
+
+def mostrar_eventos():
+    """Muestra un menú contextual con opciones de eventos, incluyendo Reiniciar."""
+    if menu_eventos_contextual:
+        # Usamos un evento ficticio para posicionar el menú
+        # Esto requiere que captures la posición del botón si quieres que aparezca justo debajo.
+        # Para simplificar, lo mostramos en el centro de la ventana:
+        pos_x = app_ventana.winfo_rootx() + app_ventana.winfo_width() // 2
+        pos_y = app_ventana.winfo_rooty() + app_ventana.winfo_height() // 2
+        menu_eventos_contextual.tk_popup(pos_x, pos_y, 0)
+    else:
+        messagebox.showinfo("Eventos", "No hay opciones de eventos disponibles.")
+
+
+def reiniciar_simulacion():
+    """Reinicia la simulación a la fecha y hora iniciales."""
     global estado_simulacion_instance
+    if messagebox.askokcancel("Reiniciar Simulación", "¿Está seguro de que desea reiniciar la simulación a la fecha inicial?"):
+        fecha_inicio_str = "2015-01-01 07:00:00"
+        nueva_fecha = datetime.strptime(fecha_inicio_str, "%Y-%m-%d %H:%M:%S")
+        estado_simulacion_instance.tiempo_actual_simulado = nueva_fecha
+        estado_simulacion_instance.actualizar_display()
+        # Opcional: Ocultar la visualización del tren si es necesario
+        if simulacion_frame.winfo_ismapped():
+             simulacion_frame.grid_remove()
+        messagebox.showinfo("Reiniciado", "La simulación ha sido reiniciada.")
+
+
+def iniciar_simulacion_ui():
+    """Configura la interfaz para mostrar la simulación y los controles."""
+    global simulacion_frame, app_ventana, estado_simulacion_instance, canvas_vias, btn_siguiente_turno
+
+    if simulacion_frame.winfo_ismapped():
+        return
+
+    app_ventana.geometry("800x500") 
+    
+    simulacion_frame.grid() 
+    btn_siguiente_turno.grid(row=1, column=0, pady=10) 
+
+
+# --- Funciones de Guardado y Carga (sin cambios) ---
+def handle_guardar():
+    datos = obtener_estado_actual()
+    guardar_datos(datos, app_ventana)
+
+def handle_cargar():
+    datos_cargados = cargar_datos(app_ventana)
     if datos_cargados and estado_simulacion_instance:
         try:
             fecha_cargada = datetime.strptime(datos_cargados["tiempo_actual_simulado"], "%Y-%m-%d %H:%M:%S")
             estado_simulacion_instance.tiempo_actual_simulado = fecha_cargada
             estado_simulacion_instance.actualizar_display()
-            print(f"Estado aplicado. Nuevo tiempo: {fecha_cargada}")
         except Exception as e:
-            messagebox.showerror("Error de datos", f"No se pudieron aplicar los datos: {e}")
+            messagebox.showerror("Error de datos", f"No se pudieron aplicar los datos cargados: {e}")
 
-# --- Funciones Auxiliares de UI ---
-
-def mostrar_info_estaciones():
-    """
-    Recopila los datos de todas las estaciones y los muestra en un messagebox.
-    """
-    if not estaciones_list:
-        messagebox.showinfo("Estaciones", "No hay datos de estaciones cargados.")
-        return
-
-    info_completa = "Datos de las Estaciones:\n\n"
-    for estacion in estaciones_list:
-        info_completa += estacion.obtener_resumen() + "\n"
-    
-    # Usamos un widget Toplevel con Text si el mensaje es demasiado largo para un messagebox estándar
-    if len(info_completa) > 1000:
-        ventana_info = Toplevel(app_ventana)
-        ventana_info.title("Datos de Estaciones")
-        text_widget = tk.Text(ventana_info, wrap=tk.WORD, padx=10, pady=10)
-        text_widget.insert(tk.END, info_completa)
-        text_widget.config(state=tk.DISABLED) # Hacer el texto de solo lectura
-        text_widget.pack(expand=True, fill=tk.BOTH)
-        Button(ventana_info, text="Cerrar", command=ventana_info.destroy).pack(pady=5)
-    else:
-        messagebox.showinfo("Estaciones", info_completa)
+def obtener_estado_actual():
+    if estado_simulacion_instance:
+        return {"tiempo_actual_simulado": estado_simulacion_instance.tiempo_actual_simulado.strftime("%Y-%m-%d %H:%M:%S")}
+    return {"tiempo_actual_simulado": datetime(2015, 1, 1, 7, 0, 0).strftime("%Y-%m-%d %H:%M:%S")}
 
 
-def mostrar_info_trenes():
-    messagebox.showinfo("Acerca de Trenes", "Información detallada sobre los trenes y su funcionamiento.")
+# --- Funciones Auxiliares de UI y Menús (sin cambios) ---
 
-def mostrar_info_poblacion():
-    messagebox.showinfo("Acerca de Población", "Información detallada sobre la población y su interacción con el sistema.")
-
-def abrir_ventana_acerca_de():
-    ventana_acerca = Toplevel(app_ventana)
-    ventana_acerca.title("Acerca de...")
-    ventana_acerca.geometry("300x180")
-    tk.Label(ventana_acerca, text="¿Qué desea saber?").pack(pady=10)
-    Button(ventana_acerca, text="Estaciones", command=mostrar_info_estaciones, width=15).pack(pady=5)
-    Button(ventana_acerca, text="Trenes", command=mostrar_info_trenes, width=15).pack(pady=5)
-    Button(ventana_acerca, text="Población", command=mostrar_info_poblacion, width=15).pack(pady=5)
-
-def manejar_boton_eventos():
-    crear_ventana_eventos(app_ventana, obtener_estado_actual, aplicar_estado_cargado)
-
-def iniciar_simulacion():
-    global btn_avanzar_hora, estado_simulacion_instance, btn_iniciar_sim
-    if btn_avanzar_hora is None:
-        estado_simulacion_instance.pack(pady=20) 
-        btn_avanzar_hora = tk.Button(app_ventana, text="Siguiente Hora >>", 
-                                     command=lambda: estado_simulacion_instance.avanzar_tiempo(timedelta(hours=1)))
-        btn_avanzar_hora.pack(pady=10)
-        btn_iniciar_sim.config(state=tk.DISABLED)
-
-def inicializar_estaciones():
-    """Crea las instancias de las estaciones al iniciar la app."""
-    global estaciones_list
-    # Usamos None para hora_inicio/final ya que la clase las espera
-    estaciones_list.append(Estacion(nombre="Estación Central (Santiago)", region="Región Metropolitana", descripcion="Principal nodo ferroviario del país", conexiones=["Rancagua", "Chillán"], poblacion_total=8242459))
-    estaciones_list.append(Estacion(nombre="Rancagua", region="Región de O’Higgins", descripcion="Distancia desde Santiago: ~87 km", conexiones=["Talca", "Estación Central"], poblacion_total=274407))
-    estaciones_list.append(Estacion(nombre="Talca", region="Región del Maule", descripcion="Distancia desde Rancagua: ~200 km", conexiones=["Chillán", "Rancagua"], poblacion_total=242344))
-    estaciones_list.append(Estacion(nombre="Chillán", region="Región de Ñuble", descripcion="Distancia desde Talca: ~180 km", conexiones=["Talca", "Estación Central"], poblacion_total=204091))
+def mostrar_menu_archivo(event):
+    if menu_archivo_contextual:
+        menu_archivo_contextual.tk_popup(event.x_root, event.y_root, 0)
+def mostrar_info_estaciones(): messagebox.showinfo("Acerca de Estaciones", "Información detallada sobre las estaciones del sistema ferroviario.")
+def mostrar_info_trenes(): messagebox.showinfo("Acerca de Trenes", "Información detallada sobre los trenes y su funcionamiento.")
+def salir_app(ventana):
+  if messagebox.askokcancel("Salir", "¿Estas seguro de querer salir?"):
+    ventana.destroy()
 
 
 # -- MAIN -- #
 def main():
-    global app_ventana, estado_simulacion_instance, btn_iniciar_sim
+  global app_ventana, estado_simulacion_instance, lateral_frame, menu_archivo_contextual, simulacion_frame, canvas_vias, btn_siguiente_turno, menu_eventos_contextual
 
-    app_ventana = tk.Tk()
-    app_ventana.title("Ferroviario")
-    app_ventana.geometry("500x350") 
+  app_ventana = tk.Tk()
+  app_ventana.title("Ferroviario")
+  app_ventana.geometry("500x450")
 
-    # 1. Inicializar los datos de las estaciones
-    inicializar_estaciones()
+  app_ventana.grid_columnconfigure(0, weight=1) 
+  app_ventana.grid_columnconfigure(1, weight=3) 
+  app_ventana.grid_rowconfigure(0, weight=1)
 
-    # 2. Inicializar el estado de simulación
-    estado_simulacion_instance = EstadoSimulacion(master=app_ventana)
-    estado_simulacion_instance.pack_forget() 
+  # --- Frame Lateral (Botones de Control) ---
+  lateral_frame = Frame(app_ventana, bg='#f0f0f0', padx=10, pady=10, bd=1, relief=tk.RAISED)
+  lateral_frame.grid(row=0, column=0, sticky="nsew") 
 
-    # 3. Crear los 3 botones principales
+  Label(lateral_frame, text="Panel de Control", font=("Helvetica", 10, "bold"), bg='#f0f0f0').pack(pady=10)
 
-    btn_iniciar_sim = tk.Button(app_ventana, text="Iniciar Simulación", font=("Helvetica", 14, "bold"),
-                                command=iniciar_simulacion)
-    btn_iniciar_sim.pack(pady=20)
+  # Botón "Archivo" (Menú contextual)
+  btn_archivo = Button(lateral_frame, text="Archivo", command=None)
+  btn_archivo.pack(fill=tk.X, pady=5)
+  btn_archivo.bind("<Button-1>", mostrar_menu_archivo)
 
-    btn_eventos = tk.Button(app_ventana, text="Eventos", command=manejar_boton_eventos)
-    btn_eventos.pack(pady=10)
+  menu_archivo_contextual = Menu(app_ventana, tearoff=0)
+  menu_archivo_contextual.add_command(label="Guardar Estado", command=handle_guardar)
+  menu_archivo_contextual.add_command(label="Cargar Estado", command=handle_cargar)
+  menu_archivo_contextual.add_separator()
+  menu_archivo_contextual.add_command(label="Salir de la App", command=lambda: salir_app(app_ventana))
 
-    btn_acerca_de = tk.Button(app_ventana, text="Acerca de", command=abrir_ventana_acerca_de)
-    btn_acerca_de.pack(pady=10)
-    
-    app_ventana.mainloop()
+  Button(lateral_frame, text="Iniciar Simulación", command=iniciar_simulacion_ui, font=("Helvetica", 10, "bold"), bg="green", fg="white").pack(fill=tk.X, pady=5)
+  
+  # Botón "Eventos" que ahora despliega un menú
+  btn_eventos = Button(lateral_frame, text="Eventos", command=None)
+  btn_eventos.pack(fill=tk.X, pady=5)
+  btn_eventos.bind("<Button-1>", lambda event: menu_eventos_contextual.tk_popup(event.x_root, event.y_root, 0))
+
+  # Menú contextual de Eventos
+  menu_eventos_contextual = Menu(app_ventana, tearoff=0)
+  menu_eventos_contextual.add_command(label="Mostrar Eventos del Día (Info)", command=mostrar_eventos)
+  menu_eventos_contextual.add_separator()
+  menu_eventos_contextual.add_command(label="Reiniciar Simulación", command=reiniciar_simulacion)
+
+
+  Button(lateral_frame, text="Acerca de Estaciones", command=mostrar_info_estaciones).pack(fill=tk.X, pady=5)
+  Button(lateral_frame, text="Acerca de Trenes", command=mostrar_info_trenes).pack(fill=tk.X, pady=5)
+  
+  # Creación del reloj con lateral_frame como maestro
+  estado_simulacion_instance = EstadoSimulacion(master=lateral_frame)
+  estado_simulacion_instance.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
+  
+  
+  # --- Pre-creación del Frame de simulación ---
+  simulacion_frame = Frame(app_ventana, bg='white', bd=2, relief=tk.GROOVE)
+  simulacion_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+
+  simulacion_frame.grid_rowconfigure(0, weight=1) 
+  simulacion_frame.grid_columnconfigure(0, weight=1)
+
+  canvas_vias = Canvas(simulacion_frame, bg='white', highlightthickness=0)
+  canvas_vias.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+  canvas_vias.bind("<Configure>", lambda event: dibujar_vias_y_estaciones(canvas_vias))
+
+  # Botón de "Siguiente Turno"
+  btn_siguiente_turno = Button(simulacion_frame, text="Siguiente Turno (+1 Hora)", 
+                                  command=estado_simulacion_instance.avanzar_una_hora,
+                                  font=("Helvetica", 12, "bold"))
+
+  # Ocultamos el frame de simulación inicialmente
+  simulacion_frame.grid_remove()
+
+  # 2 Iniciar bucle inicial
+  app_ventana.mainloop()
 
 if __name__ == "__main__":
     main()
+
