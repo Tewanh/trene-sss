@@ -1,5 +1,7 @@
+# logic/guardado.py
 import json
 from tkinter import filedialog, messagebox, Menu
+from datetime import datetime
 
 def guardar_datos(datos, ventana_principal):
     archivo_destino = filedialog.asksaveasfilename(
@@ -13,6 +15,9 @@ def guardar_datos(datos, ventana_principal):
     
     try:
         with open(archivo_destino, 'w') as archivo:
+            if 'tiempo_actual_simulado' in datos and isinstance(datos['tiempo_actual_simulado'], datetime):
+                datos['tiempo_actual_simulado'] = datos['tiempo_actual_simulado'].strftime("%Y-%m-%d %H:%M:%S")
+            
             json.dump(datos, archivo, indent=4)
         messagebox.showinfo("Guardado", f"Datos guardados exitosamente.")
     except Exception as e:
@@ -38,10 +43,7 @@ def cargar_datos(ventana_principal):
 
 def crear_menu_archivo(root, menubar, datos_funcion):
     """
-    Añade una cascada 'Archivo' al menubar de tkinter.
-    - root: la ventana principal de tkinter
-    - menubar: el Menu principal de tkinter (Menu(root))
-    - datos_funcion: función/callback que devuelve los datos actuales a guardar
+    Añade una cascada 'Archivo' al menubar de tkinter Y DEVUELVE el objeto Menu.
     """
     archivo_menu = Menu(menubar, tearoff=0)
     
@@ -49,8 +51,8 @@ def crear_menu_archivo(root, menubar, datos_funcion):
         label="Guardar", 
         command=lambda: guardar_datos(datos_funcion(), root)
     )
-    archivo_menu.add_command(
-        label="Cargar", 
-        command=lambda: cargar_datos(root)
-    )
+    # Ya no añadimos 'Cargar' aquí, se añade en main.py
     menubar.add_cascade(label="Archivo", menu=archivo_menu)
+
+    # ESTA LÍNEA ES CLAVE PARA LA CORRECCIÓN DEL ERROR
+    return archivo_menu
