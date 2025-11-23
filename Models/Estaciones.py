@@ -25,6 +25,6 @@ class Estacion:
             f"Población: {self.poblacion_total:,}\n"
         )
 
-    # Puedes mantener mostrar_info si lo usas para debuggear en consola
     def mostrar_info(self):
         print(self.obtener_resumen())
+
