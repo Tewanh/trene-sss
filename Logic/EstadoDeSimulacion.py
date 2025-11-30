@@ -1,9 +1,8 @@
-# logic/Estado_de_simulacion.py
+# Logic/EstadoDeSimulacion.py
 import tkinter as tk
 from datetime import datetime, timedelta
 
 class EstadoSimulacion(tk.Frame):
-    # Cambiamos la fecha por defecto a "2015-01-01 07:00:00"
     def __init__(self, master=None, fecha_inicio_str="2015-01-01 07:00:00"):
         super().__init__(master, padx=10, pady=10, bg='#333333')
         self.configure(relief=tk.RAISED, borderwidth=2)
@@ -34,10 +33,8 @@ class EstadoSimulacion(tk.Frame):
         """Función pública para avanzar el tiempo simulado."""
         self.tiempo_actual_simulado += delta
         self.actualizar_display()
-        print(f"Tiempo avanzado a: {self.tiempo_actual_simulado}")
         return self.tiempo_actual_simulado
     
     def avanzar_una_hora(self):
         """Avanza el tiempo simulado exactamente 1 hora."""
         self.avanzar_tiempo(timedelta(hours=1))
-
