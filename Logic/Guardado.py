@@ -16,13 +16,19 @@ def guardar_datos(datos, ventana_principal):
     
     try:
         with open(archivo_destino, 'w') as archivo:
+            # Asegurar que la fecha sea un string antes de serializar
             if 'tiempo_actual_simulado' in datos and isinstance(datos['tiempo_actual_simulado'], datetime):
                 datos['tiempo_actual_simulado'] = datos['tiempo_actual_simulado'].strftime("%Y-%m-%d %H:%M:%S")
             
             json.dump(datos, archivo, indent=4)
-        messagebox.showinfo("Guardado", f"Datos guardados exitosamente.")
+        messagebox.showinfo("Guardado", f"Datos guardados exitosamente en {archivo_destino.split('/')[-1]}.")
+    except IOError as e:
+        # Maneja errores de escritura o permisos
+        messagebox.showerror("Error de guardado (IO)", f"No se pudo escribir en el archivo: {e}")
     except Exception as e:
-        messagebox.showerror("Error de guardado", f"No se pudieron guardar los datos: {e}")
+        # Maneja cualquier otro error inesperado
+        messagebox.showerror("Error de guardado", f"Ocurrió un error inesperado al guardar los datos: {e}")
+
 
 def cargar_datos(ventana_principal):
     archivo_origen = filedialog.askopenfilename(
@@ -36,9 +42,17 @@ def cargar_datos(ventana_principal):
     try:
         with open(archivo_origen, 'r') as archivo:
             datos = json.load(archivo)
-        messagebox.showinfo("Cargado", f"Datos cargados exitosamente.")
+        messagebox.showinfo("Cargado", f"Datos cargados exitosamente de {archivo_origen.split('/')[-1]}.")
         return datos
+    except FileNotFoundError:
+        messagebox.showerror("Error de carga", "El archivo no existe.")
+        return None
+    except json.JSONDecodeError:
+        # Maneja archivos que no son JSON válidos o están corruptos
+        messagebox.showerror("Error de carga", "El archivo no tiene un formato JSON válido o está corrupto.")
+        return None
     except Exception as e:
+        # Maneja cualquier otro error inesperado
         messagebox.showerror("Error de carga", f"No se pudieron cargar los datos: {e}")
         return None
 
@@ -50,4 +64,5 @@ def crear_menu_archivo(root, menubar, datos_funcion):
         command=lambda: guardar_datos(datos_funcion(), root)
     )
     menubar.add_cascade(label="Archivo", menu=archivo_menu)
-    return archivo_menu 
+    return archivo_menu
+
