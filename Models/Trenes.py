@@ -13,7 +13,9 @@ class Tren:
         self.posicion = 0 
         self.via = via    
         self.canvas_id = None 
-        self.pasajeros_actuales = 0 
+
+        max_cap = self.capacidad if self.capacidad else 236
+        self.pasajeros_actuales = random.randint(0, max_cap) 
         self.tiempo_restante_min = 0 
 
     def calcular_tiempo_hasta_siguiente(self, distancia_km: float):
@@ -40,4 +42,5 @@ class Tren:
         resumen += f"⏱️ Tiempo restante para llegar: {self.tiempo_restante_min:.1f} min\n"
         
         return resumen
+
 
