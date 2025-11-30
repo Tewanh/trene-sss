@@ -48,7 +48,7 @@ class Generador(ABC):
         pass
 
 # =============================================================================
-# GENERADOR AVANZADO: PROPORCIÓN DE POBLACIÓN 
+# GENERADOR AVANZADO: PROPORCIÓN DE POBLACIÓN
 # =============================================================================
 class GeneradorPorProporcion(Generador):
     def __init__(self, *args, tasa_base_clientes_por_hora: float = 0.001, **kwargs):
