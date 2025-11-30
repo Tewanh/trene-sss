@@ -1,14 +1,12 @@
-# ProgramaPrincipal/interfaz.py (Versión Corregida Final)
+# ProgramaPrincipal/interfaz.py
 import tkinter as tk
 from tkinter import messagebox, Canvas, Button, Frame, Toplevel
-# Importaciones desde las carpetas logic/ y Models/
 from Logic.Guardado import guardar_datos, cargar_datos
 from Logic.EstadoDeSimulacion import EstadoSimulacion
 from Models.Estaciones import Estacion 
 from Models.Trenes import Tren 
 from datetime import datetime, timedelta
 import random
-# Se mantiene la importación para el otro botón de eventos adicionales
 from Ui.eventos_ui import crear_ventana_eventos
 
 
@@ -21,7 +19,7 @@ frame_control = None
 frame_simulacion_view = None 
 canvas_vias = None
 TRENES_ACTIVOS = [] 
-POSICIONES_X_ESTACIONES = [100, 300, 500, 700] # Se definen aquí para evitar errores
+POSICIONES_X_ESTACIONES = [100, 300, 500, 700] # Se definen aquí
 simulacion_iniciada = False 
 btn_siguiente_turno_ref = None 
 
@@ -147,7 +145,7 @@ def obtener_estado_actual():
 
 def cargar_estado():
     global estado_simulacion_instance, app_ventana, simulacion_iniciada
-    datos_cargados = cargar_datos(app_ventana)
+    datos_cargados = cargar_datos(app_ventana) # cargar_datos ya maneja excepciones y UI
     if datos_cargados and estado_simulacion_instance:
         try:
             fecha_cargada = datetime.strptime(datos_cargados["tiempo_actual_simulado"], "%Y-%m-%d %H:%M:%S")
@@ -156,6 +154,9 @@ def cargar_estado():
             
             if not simulacion_iniciada:
                 iniciar_simulacion_ui() 
+        except ValueError:
+            # Manejo de error si la fecha en el JSON es incorrecta
+            messagebox.showerror("Error de datos", "El formato de fecha en el archivo cargado es incorrecto.")
         except Exception as e:
             messagebox.showerror("Error de datos", f"No se pudieron aplicar los datos cargados: {e}")
 
@@ -200,11 +201,18 @@ def abrir_ventana_renombrar_estaciones():
         nombre_actual = variable.get()
         nuevo = entry_nombre.get().strip()
         if not nuevo:
-            messagebox.showerror("Error", "Debes escribir un nombre.")
+            messagebox.showerror("Error de ingreso", "Debes escribir un nombre válido.")
             return
+
+        # Verificar si el nuevo nombre ya existe (robustez)
+        if nuevo in [e.nombre for e in ESTACIONES_OBJETOS]:
+             messagebox.showerror("Error de ingreso", f"La estación '{nuevo}' ya existe.")
+             return
+
         for e in ESTACIONES_OBJETOS: 
             if e.nombre == nombre_actual:
                 e.nombre = nuevo
+        
         if canvas_vias:
             canvas_vias.delete("all")
             dibujar_vias_y_estaciones(canvas_vias) 
@@ -213,6 +221,10 @@ def abrir_ventana_renombrar_estaciones():
     tk.Button(ventana, text="Aplicar", command=aplicar_cambio).pack(pady=10)
 
 def generar_poblacion_ui():
+    if not simulacion_iniciada:
+        messagebox.showerror("Error", "Debes iniciar la simulación primero.")
+        return
+        
     resumen_total = ""
     for e in ESTACIONES_OBJETOS:
         clientes = e.generador.generar_clientes(
@@ -270,6 +282,10 @@ def dibujar_vias_y_estaciones(canvas: Canvas):
             canvas.coords(f"tren_{tren.id}_text", pos_x, pos_y)
 
 def abrir_menu_eventos_adicionales():
+    if not simulacion_iniciada:
+        messagebox.showerror("Error", "Debes iniciar la simulación primero para usar los eventos.")
+        return
+        
     menu_eventos_window = Toplevel(app_ventana)
     menu_eventos_window.title("Eventos Adicionales")
     menu_eventos_window.geometry("250x100")
@@ -302,7 +318,12 @@ def aplicar_aumento_velocidad(tren, ventana):
         f"La nueva velocidad del tren {tren.nombre} es {tren.velocidad_max} km/h"
     )
     distancia_al_siguiente = DISTANCIAS_KM[tren.posicion]
-    tren.tiempo_restante_min = distancia_al_siguiente / tren.velocidad_max * 60
+    # Usar try-except por si acaso la velocidad_max llega a ser 0 (aunque es poco probable aquí)
+    try:
+        tren.tiempo_restante_min = distancia_al_siguiente / tren.velocidad_max * 60
+    except ZeroDivisionError:
+        tren.tiempo_restante_min = 0
+
     ventana.destroy()
 
 
@@ -337,11 +358,9 @@ def main():
   
   Frame(frame_control, height=2, bg='gray').pack(fill='x', pady=10)
 
-  # Botón "Reiniciar" ahora es directo y usa la función local con confirmación
   Button(frame_control, text="Reiniciar Simulación", command=reiniciar_simulacion, 
          width=20).pack(pady=5)
 
-  # Botón para Eventos Adicionales (aumentar velocidad, etc.)
   Button(frame_control, text="Eventos Adicionales", command=abrir_menu_eventos_adicionales, width=20).pack(pady=5)
 
   Button(frame_control, text="Renombrar Estaciones", command=abrir_ventana_renombrar_estaciones, width=20).pack(pady=5)
@@ -355,6 +374,10 @@ def main():
   Button(frame_control, text="Salir", command=lambda: salir_app(app_ventana), width=20, bg='red', fg='white').pack(pady=20, side=tk.BOTTOM)
   
   app_ventana.mainloop()
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
