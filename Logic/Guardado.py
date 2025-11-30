@@ -1,4 +1,4 @@
-# Logic/Guardado.py 
+# Logic/Guardado.py
 import json
 import tkinter as tk
 from tkinter import filedialog, messagebox, Menu
@@ -16,19 +16,15 @@ def guardar_datos(datos, ventana_principal):
     
     try:
         with open(archivo_destino, 'w') as archivo:
-            # Asegurar que la fecha sea un string antes de serializar
             if 'tiempo_actual_simulado' in datos and isinstance(datos['tiempo_actual_simulado'], datetime):
                 datos['tiempo_actual_simulado'] = datos['tiempo_actual_simulado'].strftime("%Y-%m-%d %H:%M:%S")
             
             json.dump(datos, archivo, indent=4)
         messagebox.showinfo("Guardado", f"Datos guardados exitosamente en {archivo_destino.split('/')[-1]}.")
     except IOError as e:
-        # Maneja errores de escritura o permisos
         messagebox.showerror("Error de guardado (IO)", f"No se pudo escribir en el archivo: {e}")
     except Exception as e:
-        # Maneja cualquier otro error inesperado
         messagebox.showerror("Error de guardado", f"Ocurrió un error inesperado al guardar los datos: {e}")
-
 
 def cargar_datos(ventana_principal):
     archivo_origen = filedialog.askopenfilename(
@@ -48,15 +44,12 @@ def cargar_datos(ventana_principal):
         messagebox.showerror("Error de carga", "El archivo no existe.")
         return None
     except json.JSONDecodeError:
-        # Maneja archivos que no son JSON válidos o están corruptos
         messagebox.showerror("Error de carga", "El archivo no tiene un formato JSON válido o está corrupto.")
         return None
     except Exception as e:
-        # Maneja cualquier otro error inesperado
         messagebox.showerror("Error de carga", f"No se pudieron cargar los datos: {e}")
         return None
 
-# Esta función ya no se usa en main.py, pero la dejamos por si acaso.
 def crear_menu_archivo(root, menubar, datos_funcion):
     archivo_menu = Menu(menubar, tearoff=0)
     archivo_menu.add_command(
@@ -65,4 +58,3 @@ def crear_menu_archivo(root, menubar, datos_funcion):
     )
     menubar.add_cascade(label="Archivo", menu=archivo_menu)
     return archivo_menu
-
