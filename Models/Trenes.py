@@ -1,4 +1,4 @@
-# Models/Trenes.py 
+# Models/Trenes.py
 import random
 
 class Tren:
