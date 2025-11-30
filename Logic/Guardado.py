@@ -1,5 +1,6 @@
-# logic/guardado.py
+# Logic/Guardado.py
 import json
+import tkinter as tk
 from tkinter import filedialog, messagebox, Menu
 from datetime import datetime
 
@@ -41,18 +42,12 @@ def cargar_datos(ventana_principal):
         messagebox.showerror("Error de carga", f"No se pudieron cargar los datos: {e}")
         return None
 
+# Esta función ya no se usa en main.py, pero la dejamos por si acaso.
 def crear_menu_archivo(root, menubar, datos_funcion):
-    """
-    Añade una cascada 'Archivo' al menubar de tkinter Y DEVUELVE el objeto Menu.
-    """
     archivo_menu = Menu(menubar, tearoff=0)
-    
     archivo_menu.add_command(
         label="Guardar", 
         command=lambda: guardar_datos(datos_funcion(), root)
     )
-    # Ya no añadimos 'Cargar' aquí, se añade en main.py
     menubar.add_cascade(label="Archivo", menu=archivo_menu)
-
-    # ESTA LÍNEA ES CLAVE PARA LA CORRECCIÓN DEL ERROR
-    return archivo_menu
+    return archivo_menu 
