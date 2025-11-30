@@ -8,9 +8,10 @@ class EstadoSimulacion(tk.Frame):
         self.configure(relief=tk.RAISED, borderwidth=2)
 
         try:
+            # Manejo de conversión inicial de fecha
             self.tiempo_actual_simulado = datetime.strptime(fecha_inicio_str, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            print(f"Error en formato de fecha: {fecha_inicio_str}. Usando 2015-01-01 07:00:00.")
+        except ValueError as e:
+            print(f"Error en formato de fecha inicial: {fecha_inicio_str}. Usando valor por defecto. Error: {e}")
             self.tiempo_actual_simulado = datetime(2015, 1, 1, 7, 0, 0)
         
         self.label_hora = tk.Label(self, text="", font=("Helvetica", 24, "bold"), fg="#00ff00", bg='#333333')
