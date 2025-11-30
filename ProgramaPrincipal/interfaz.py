@@ -1,12 +1,14 @@
 # ProgramaPrincipal/interfaz.py
 import tkinter as tk
 from tkinter import messagebox, Canvas, Button, Frame, Toplevel
+# Importaciones desde las carpetas logic/ y Models/
 from Logic.Guardado import guardar_datos, cargar_datos
 from Logic.EstadoDeSimulacion import EstadoSimulacion
 from Models.Estaciones import Estacion 
 from Models.Trenes import Tren 
 from datetime import datetime, timedelta
 import random
+# Se mantiene la importación para el otro botón de eventos adicionales
 from Ui.eventos_ui import crear_ventana_eventos
 
 
@@ -19,7 +21,7 @@ frame_control = None
 frame_simulacion_view = None 
 canvas_vias = None
 TRENES_ACTIVOS = [] 
-POSICIONES_X_ESTACIONES = [100, 300, 500, 700] # Se definen aquí
+POSICIONES_X_ESTACIONES = [100, 300, 500, 700]
 simulacion_iniciada = False 
 btn_siguiente_turno_ref = None 
 
@@ -37,8 +39,57 @@ DISTANCIAS_KM = [87.0, 200.0, 180.0, 180.0]
 VELOCIDAD_TREN = 120.0
 
 # =====================================================================================
-# FUNCIONES DE LÓGICA PRINCIPAL (Definidas primero para que puedan ser usadas como command)
+# FUNCIONES DE UI Y LÓGICA PRINCIPAL (Definidas primero para que puedan ser usadas como command)
 # =====================================================================================
+
+def dibujar_vias_y_estaciones(canvas: Canvas):
+    """Dibuja un diseño básico de DOS vías, las estaciones y los trenes."""
+    global TRENES_ACTIVOS, POSICIONES_X_ESTACIONES
+
+    canvas_width = canvas.winfo_width()
+    canvas_height = canvas.winfo_height()
+    
+    if canvas_width < 10 or canvas_height < 10:
+        return
+
+    via_y_1 = (canvas_height / 2) - 15
+    via_y_2 = (canvas_height / 2) + 15
+    
+    if not canvas.find_withtag("estacion"):
+        canvas.create_line(50, via_y_1, canvas_width - 50, via_y_1, fill="#555", width=3, tags="via")
+        canvas.create_line(50, via_y_2, canvas_width - 50, via_y_2, fill="#555", width=3, tags="via")
+        
+        estaciones_nombres = [e.nombre for e in ESTACIONES_OBJETOS]
+        for i, x in enumerate(POSICIONES_X_ESTACIONES):
+            canvas.create_rectangle(x-15, via_y_1-5, x+15, via_y_2+5, fill="red", outline="black", tags="estacion")
+            canvas.create_text(x, via_y_2 + 30, text=estaciones_nombres[i], font=("Helvetica", 9, "bold"), tags="estacion_label")
+
+    if not TRENES_ACTIVOS:
+        TRENES_ACTIVOS.extend([
+            Tren(id_tren=1, nombre="BMU", energia="Bimodal", velocidad_max=160, capacidad=236, via=1), 
+            Tren(id_tren=2, nombre="EMU", energia="Eléctrico", velocidad_max=120, capacidad=236, via=2) 
+        ])
+        for tren in TRENES_ACTIVOS:
+            distancia_al_siguiente = DISTANCIAS_KM[tren.posicion]
+            tren.tiempo_restante_min = distancia_al_siguiente / tren.velocidad_max * 60
+
+    for tren in TRENES_ACTIVOS:
+        pos_x = POSICIONES_X_ESTACIONES[tren.posicion] 
+        offset_y = -15 if tren.via == 1 else 15
+        pos_y = canvas_height / 2 + offset_y
+
+        if tren.canvas_id is None:
+             tren.canvas_id = canvas.create_rectangle(
+                pos_x-10, pos_y-5, pos_x+10, pos_y+5,
+                fill="blue" if tren.via == 1 else "orange",
+                tags=f"tren_{tren.id}" 
+            )
+             canvas.create_text(pos_x, pos_y, text=tren.nombre, fill="white",
+                               font=("Helvetica", 6, "bold"), tags=f"tren_{tren.id}_text")
+        else:
+            canvas.coords(tren.canvas_id, pos_x - 10, pos_y - 5, pos_x + 10, pos_y + 5)
+            canvas.coords(f"tren_{tren.id}_text", pos_x, pos_y)
+
 
 def mover_trenes_ui():
     """
@@ -72,6 +123,11 @@ def mover_trenes_ui():
                 estacion_actual_obj.clientes_esperando = clientes_esperando[:-cantidad_a_subir]
                 tren.pasajeros_actuales += cantidad_a_subir
 
+    # REQUISITO 1: Recalcular la población flotante para el próximo turno (19%-21%)
+    for estacion in ESTACIONES_OBJETOS:
+        porcentaje = random.uniform(0.19, 0.21) 
+        estacion.poblacion_flotante = int(estacion.poblacion_total * porcentaje)
+
     for estacion in ESTACIONES_OBJETOS:
         estacion.simular_generacion_clientes(minutos_turno=60) 
 
@@ -88,6 +144,11 @@ def iniciar_simulacion_ui():
     # Generar población inicial para que los trenes tengan clientes que recoger en el primer turno
     for estacion in ESTACIONES_OBJETOS:
         estacion.simular_generacion_clientes(minutos_turno=60)
+
+    # REQUISITO 1 (inicial): Recalcular la población flotante inicial (19%-21%)
+    for estacion in ESTACIONES_OBJETOS:
+        porcentaje = random.uniform(0.19, 0.21) 
+        estacion.poblacion_flotante = int(estacion.poblacion_total * porcentaje)
 
     simulacion_iniciada = True 
 
@@ -139,11 +200,13 @@ def reiniciar_simulacion():
 # =====================================================================================
 
 def obtener_estado_actual():
+    """Devuelve un diccionario con el estado actual de la simulación para guardar."""
     if estado_simulacion_instance:
         return {"tiempo_actual_simulado": estado_simulacion_instance.tiempo_actual_simulado.strftime("%Y-%m-%d %H:%M:%S")}
     return {}
 
 def cargar_estado():
+    """Maneja la carga de datos desde archivo y actualiza la UI."""
     global estado_simulacion_instance, app_ventana, simulacion_iniciada
     datos_cargados = cargar_datos(app_ventana) # cargar_datos ya maneja excepciones y UI
     if datos_cargados and estado_simulacion_instance:
@@ -155,12 +218,12 @@ def cargar_estado():
             if not simulacion_iniciada:
                 iniciar_simulacion_ui() 
         except ValueError:
-            # Manejo de error si la fecha en el JSON es incorrecta
             messagebox.showerror("Error de datos", "El formato de fecha en el archivo cargado es incorrecto.")
         except Exception as e:
             messagebox.showerror("Error de datos", f"No se pudieron aplicar los datos cargados: {e}")
 
 def aplicar_estado_desde_guardado(datos_cargados):
+    """Callback usado por eventos_ui.py para aplicar un estado cargado o reiniciado."""
     if datos_cargados and "tiempo_actual_simulado" in datos_cargados:
         try:
             fecha = datetime.strptime(datos_cargados["tiempo_actual_simulado"], "%Y-%m-%d %H:%M:%S")
@@ -204,7 +267,6 @@ def abrir_ventana_renombrar_estaciones():
             messagebox.showerror("Error de ingreso", "Debes escribir un nombre válido.")
             return
 
-        # Verificar si el nuevo nombre ya existe (robustez)
         if nuevo in [e.nombre for e in ESTACIONES_OBJETOS]:
              messagebox.showerror("Error de ingreso", f"La estación '{nuevo}' ya existe.")
              return
@@ -234,52 +296,6 @@ def generar_poblacion_ui():
         resumen_total += f"{e.nombre}: {len(clientes)} clientes generados y añadidos a la espera.\n"
     messagebox.showinfo("Población Generada", resumen_total)
 
-def dibujar_vias_y_estaciones(canvas: Canvas):
-    global TRENES_ACTIVOS, POSICIONES_X_ESTACIONES
-
-    canvas_width = canvas.winfo_width()
-    canvas_height = canvas.winfo_height()
-    
-    if canvas_width < 10 or canvas_height < 10:
-        return
-
-    via_y_1 = (canvas_height / 2) - 15
-    via_y_2 = (canvas_height / 2) + 15
-    
-    if not canvas.find_withtag("estacion"):
-        canvas.create_line(50, via_y_1, canvas_width - 50, via_y_1, fill="#555", width=3, tags="via")
-        canvas.create_line(50, via_y_2, canvas_width - 50, via_y_2, fill="#555", width=3, tags="via")
-        
-        estaciones_nombres = [e.nombre for e in ESTACIONES_OBJETOS]
-        for i, x in enumerate(POSICIONES_X_ESTACIONES):
-            canvas.create_rectangle(x-15, via_y_1-5, x+15, via_y_2+5, fill="red", outline="black", tags="estacion")
-            canvas.create_text(x, via_y_2 + 30, text=estaciones_nombres[i], font=("Helvetica", 9, "bold"), tags="estacion_label")
-
-    if not TRENES_ACTIVOS:
-        TRENES_ACTIVOS.extend([
-            Tren(id_tren=1, nombre="BMU", energia="Bimodal", velocidad_max=160, capacidad=236, via=1), 
-            Tren(id_tren=2, nombre="EMU", energia="Eléctrico", velocidad_max=120, capacidad=236, via=2) 
-        ])
-        for tren in TRENES_ACTIVOS:
-            distancia_al_siguiente = DISTANCIAS_KM[tren.posicion]
-            tren.tiempo_restante_min = distancia_al_siguiente / tren.velocidad_max * 60
-
-    for tren in TRENES_ACTIVOS:
-        pos_x = POSICIONES_X_ESTACIONES[tren.posicion] 
-        offset_y = -15 if tren.via == 1 else 15
-        pos_y = canvas_height / 2 + offset_y
-
-        if tren.canvas_id is None:
-             tren.canvas_id = canvas.create_rectangle(
-                pos_x-10, pos_y-5, pos_x+10, pos_y+5,
-                fill="blue" if tren.via == 1 else "orange",
-                tags=f"tren_{tren.id}" 
-            )
-             canvas.create_text(pos_x, pos_y, text=tren.nombre, fill="white",
-                               font=("Helvetica", 6, "bold"), tags=f"tren_{tren.id}_text")
-        else:
-            canvas.coords(tren.canvas_id, pos_x - 10, pos_y - 5, pos_x + 10, pos_y + 5)
-            canvas.coords(f"tren_{tren.id}_text", pos_x, pos_y)
 
 def abrir_menu_eventos_adicionales():
     if not simulacion_iniciada:
@@ -318,7 +334,6 @@ def aplicar_aumento_velocidad(tren, ventana):
         f"La nueva velocidad del tren {tren.nombre} es {tren.velocidad_max} km/h"
     )
     distancia_al_siguiente = DISTANCIAS_KM[tren.posicion]
-    # Usar try-except por si acaso la velocidad_max llega a ser 0 (aunque es poco probable aquí)
     try:
         tren.tiempo_restante_min = distancia_al_siguiente / tren.velocidad_max * 60
     except ZeroDivisionError:
@@ -377,8 +392,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-if __name__ == "__main__":
-    main()
-
