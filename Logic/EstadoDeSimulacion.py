@@ -8,7 +8,6 @@ class EstadoSimulacion(tk.Frame):
         self.configure(relief=tk.RAISED, borderwidth=2)
 
         try:
-            # Manejo de conversión inicial de fecha
             self.tiempo_actual_simulado = datetime.strptime(fecha_inicio_str, "%Y-%m-%d %H:%M:%S")
         except ValueError as e:
             print(f"Error en formato de fecha inicial: {fecha_inicio_str}. Usando valor por defecto. Error: {e}")
