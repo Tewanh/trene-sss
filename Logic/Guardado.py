@@ -58,3 +58,8 @@ def crear_menu_archivo(root, menubar, datos_funcion):
     )
     menubar.add_cascade(label="Archivo", menu=archivo_menu)
     return archivo_menu
+
+        command=lambda: guardar_datos(datos_funcion(), root)
+    )
+    menubar.add_cascade(label="Archivo", menu=archivo_menu)
+    return archivo_menu
