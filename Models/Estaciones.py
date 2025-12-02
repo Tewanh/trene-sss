@@ -1,38 +1,78 @@
-# Models/Estaciones.py
-import datetime as dt
+# Models/Estaciones.py — versión totalmente corregida y compatible con tu interfaz
+
 import random
-from Models.Generador import GeneradorPorProporcion 
+from Models.Generador import GeneradorPeak
+from Models.Clientes import Cliente
+
 
 class Estacion:
-    """Representa una estación de tren con sus datos y lógica de simulación."""
+    """
+    Representa una estación del sistema de trenes.
+    Contiene:
+    - nombre
+    - región
+    - descripción
+    - conexiones
+    - población total
+    - generador de clientes
+    - clientes esperando en el andén
+    """
 
-    def __init__(self, nombre: str, region: str, descripcion: str, conexiones: list[str], poblacion_total: int, hora_inicio: dt.datetime = None, hora_final: dt.datetime = None):
+    def __init__(self, nombre, region, descripcion, conexiones, poblacion_total):
         self.nombre = nombre
         self.region = region
         self.descripcion = descripcion
         self.conexiones = conexiones
         self.poblacion_total = poblacion_total
-        
-        self.generador = GeneradorPorProporcion(poblacion=self.poblacion_total) 
-        self.poblacion_flotante = int(self.poblacion_total * 0.20) 
-        self.clientes_esperando = [] 
 
-    def obtener_resumen(self) -> str:
-        """Devuelve un string formateado con los datos principales de la estación."""
-        return (
-            f"--- {self.nombre} ---\n"
-            f"📍 {self.region}\n"
-            f"🏙️ {self.descripcion}\n"
-            f"🚉 Conexiones: {', '.join(self.conexiones)}\n"
-            f"Población total: {self.poblacion_total:,}\n"
-            f"Población flotante aprox: {self.poblacion_flotante:,}\n"
-            f"👥 Clientes esperando en el andén: {len(self.clientes_esperando)}\n"
+        # Población flotante (20% ± 1%)
+        self.poblacion_flotante = int(self.poblacion_total * random.uniform(0.19, 0.21))
+
+        # Generador de clientes independiente por estación
+        self.generador = GeneradorPeak(
+            poblacion=self.poblacion_flotante,   # población que realmente viaja
+            tasa_base_por_minuto=0.004,
+            factor_peak=3.0
         )
 
-    def simular_generacion_clientes(self, minutos_turno: int):
-        nuevos_clientes = self.generador.generar_clientes(minutos_turno, constructor=None) 
-        self.clientes_esperando.extend(nuevos_clientes)
+        # Lista de clientes esperando en el andén
+        self.clientes_esperando = []
 
-    def mostrar_info(self):
-        print(self.obtener_resumen())
+        self.normalizar_nombres()
 
+    # ---------------------------------------------------------
+    # Normalizar nombres
+    # ---------------------------------------------------------
+    def normalizar_nombres(self):
+        self.nombre = self.nombre.strip()
+        self.conexiones = [c.strip() for c in self.conexiones]
+
+    # ---------------------------------------------------------
+    # Resumen textual para la interfaz
+    # ---------------------------------------------------------
+    def obtener_resumen(self):
+        return (
+            f"📍 {self.nombre}\n"
+            f"Región: {self.region}\n"
+            f"Descripción: {self.descripcion}\n"
+            f"Población total: {self.poblacion_total}\n"
+            f"Población flotante estimada: {self.poblacion_flotante}\n"
+            f"Clientes esperando: {len(self.clientes_esperando)}\n"
+            f"Conexiones: {', '.join(self.conexiones)}\n"
+        )
+
+    # ---------------------------------------------------------
+    # Generar pasajeros manualmente (si se necesitara)
+    # ---------------------------------------------------------
+    def generar_pasajeros(self, minutos, lista_estaciones):
+        nuevos = self.generador.generar_clientes(
+            minutos=minutos,
+            constructor=lambda _, tiempo, e=self: Cliente(
+                None,
+                e.nombre,
+                tiempo,
+                destino=random.choice([x.nombre for x in lista_estaciones if x.nombre != e.nombre])
+            )
+        )
+        self.clientes_esperando.extend(nuevos)
+        return nuevos
