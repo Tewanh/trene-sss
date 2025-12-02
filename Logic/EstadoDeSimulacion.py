@@ -1,4 +1,4 @@
-# Logic/EstadoDeSimulacion.py
+#Logic/EstadoDeSimulacion.py
 import tkinter as tk
 from datetime import datetime, timedelta
 
