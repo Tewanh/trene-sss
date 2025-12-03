@@ -1,16 +1,15 @@
-# ProgramaPrincipal/interfaz.py — integración final con GeneradorPeak
+# ProgramaPrincipal/interfaz.py  —  VERSIÓN CORREGIDA (reemplazar archivo)
 import tkinter as tk
 from tkinter import messagebox, Canvas, Button, Frame, Toplevel, Menu, Scrollbar, Text
 from datetime import datetime, timedelta
 import random
 
-# Importaciones de los módulos
+# Importaciones de los módulos (asegúrate que existan)
 from Logic.Guardado import guardar_datos, cargar_datos
 from Logic.EstadoDeSimulacion import EstadoSimulacion
-from Models.Estaciones import Estacion 
+from Models.Estaciones import Estacion
 from Models.Trenes import Tren
-from Models.Clientes import Cliente 
-from Models.Generador import GeneradorPeak
+from Models.Clientes import Cliente
 
 # Constantes de datos de simulación
 ESTACIONES_DATA = [
@@ -19,481 +18,560 @@ ESTACIONES_DATA = [
     {"nombre": "Talca", "region": "Region del Maule", "descripcion": "Distancia desde Rancagua: ~200 km | Tiempo estimado: 2 h 30 min", "conexiones": ["Chillan", "Rancagua"], "poblacion_total": 242344},
     {"nombre": "Chillan", "region": "Region de Nuble", "descripcion": "Distancia desde Talca: ~180 km", "conexiones": ["Talca", "Estacion Central"], "poblacion_total": 204091}
 ]
-DISTANCIAS_KM = [87.0, 200.0, 180.0] 
+DISTANCIAS_KM = [87.0, 200.0, 180.0]
 NUM_ESTACIONES = len(ESTACIONES_DATA)
-
-# Definimos las posiciones X para 4 estaciones en el canvas
 POSICIONES_X_ESTACIONES = [100, 300, 500, 700]
 
 
 class SimulacionApp:
-    def __init__(self, root):        
+    def __init__(self, root):
         self.root = root
         self.root.title("Simulador de Trenes - Proyecto Final")
         self.root.geometry("800x600")
 
-        # Estado de simulacion (se inicializa en configurar_interfaz_principal)
+        # Estado y modelos
         self.estado_simulacion_instance = None
-
-        # Modelos en memoria
         self.trenes_activos = []
         self.estaciones_objetos = []
         self.simulacion_iniciada = False
-        
-        # Referencias UI
+
+        # UI refs
         self.frame_control = None
         self.frame_simulacion_view = None
         self.canvas_vias = None
         self.btn_siguiente_turno_ref = None
-        self.btn_iniciar_simulacion_ref = None 
-        self.text_resumen_local = None 
+        self.btn_iniciar_simulacion_ref = None
+        self.text_resumen_local = None
 
-        # Cargar modelos
+        # Inicializar modelos y UI
         self.inicializar_estaciones()
-
-        # Integrar GeneradorPeak (opcion 1: sustituir generacion por defecto)
-        total_poblacion = sum(e.poblacion_total for e in self.estaciones_objetos) if self.estaciones_objetos else 1
-        self.generador_peak = GeneradorPeak(
-            poblacion=total_poblacion,
-            tasa_base_por_minuto=0.004,
-            factor_peak=3.0
-        )
-
-        # Configurar la interfaz (crea EstadoDeSimulacion dentro)
         self.configurar_interfaz_principal()
 
+    # -----------------------------
+    # Inicializacion estaciones
+    # -----------------------------
     def inicializar_estaciones(self):
-        # Crea las instancias de Estacion a partir de los datos y normaliza nombres.
         self.estaciones_objetos = []
         for data in ESTACIONES_DATA:
-            estacion = Estacion(
+            est = Estacion(
                 nombre=data['nombre'],
                 region=data['region'],
                 descripcion=data['descripcion'],
                 conexiones=data['conexiones'],
                 poblacion_total=data['poblacion_total']
             )
-            # Normalizar nombres (metodo en Estacion)
-            if hasattr(estacion, "normalizar_nombres"):
-                estacion.normalizar_nombres() 
-            self.estaciones_objetos.append(estacion)
+            # Normalizar si existe
+            if hasattr(est, "normalizar_nombres"):
+                est.normalizar_nombres()
+            # Asegurar lista de clientes esperando
+            if not hasattr(est, "clientes_esperando"):
+                est.clientes_esperando = []
+            # poblacion_flotante si no existe
+            if not hasattr(est, "poblacion_flotante"):
+                est.poblacion_flotante = int(est.poblacion_total * random.uniform(0.19, 0.21))
+            self.estaciones_objetos.append(est)
 
-    def normalizar_nombres_estaciones(self):
-        # Helper si en algun momento hay que normalizar toda la lista.
-        for e in self.estaciones_objetos:
-            e.nombre = e.nombre.strip()
-            e.conexiones = [c.strip() for c in e.conexiones]
-
-    # --- Funciones de Logica de Simulacion ---
-
+    # -----------------------------
+    # Trenes activos
+    # -----------------------------
     def inicializar_trenes_activos(self):
         if not self.trenes_activos:
-            self.trenes_activos.extend([
-                Tren(id_tren=1, nombre="BMU", energia="Bimodal", velocidad_max=160, capacidad=236, via=1), 
-                Tren(id_tren=2, nombre="EMU", energia="Electrico", velocidad_max=120, capacidad=236, via=2) 
-            ])
+            # Creación de trenes con velocidad_actual inicial razonable
+            t1 = Tren(id_tren=1, nombre="BMU", energia="Bimodal", velocidad_max=160, capacidad=236, via=1)
+            t2 = Tren(id_tren=2, nombre="EMU", energia="Electrico", velocidad_max=120, capacidad=236, via=2)
+            # Si Tren tiene atributo velocidad_actual, asegúrate de que no sea 0 absoluto para que calcule tiempos.
+            if not hasattr(t1, "velocidad_actual"):
+                t1.velocidad_actual = max(10, int(t1.velocidad_max * 0.5))
+            if not hasattr(t2, "velocidad_actual"):
+                t2.velocidad_actual = max(10, int(t2.velocidad_max * 0.5))
+            self.trenes_activos.extend([t1, t2])
             for tren in self.trenes_activos:
-                distancia_al_siguiente = DISTANCIAS_KM[0]
-                tren.calcular_tiempo_hasta_siguiente(distancia_al_siguiente)
+                # recalcular tiempo inicial
+                idx = 0
+                distancia = DISTANCIAS_KM[idx]
+                # calcular_tiempo_hasta_siguiente debe usar velocidad_actual (ver Trenes.py)
+                tren.calcular_tiempo_hasta_siguiente(distancia)
 
+    # -----------------------------
+    # Subida/Bajada de pasajeros
+    # -----------------------------
     def manejar_pasajeros_estacion(self, tren: Tren, estacion: Estacion):
-        # Logica de subida y bajada de pasajeros para un tren y estacion especificos.
         bajaron = 0
         subieron = 0
-        
-        # Normalizar nombre de estacion para comparar
-        nombre_estacion_norm = estacion.nombre.strip().lower()
 
-        # 1. Desembarque (comparacion robusta)
+        nombre_est_norm = estacion.nombre.strip().lower()
+
+        # Desembarque: pasajeros cuyo destino coincida con estación (destino puede ser string)
         pasajeros_restantes = []
         for p in tren.pasajeros_actuales:
-            if isinstance(p, Cliente):
-                destino_norm = (getattr(p, 'destino', '') or '').strip().lower()
-                if destino_norm == nombre_estacion_norm:
-                    bajaron += 1
-                    continue
-            pasajeros_restantes.append(p)
+            # p puede ser instancia Cliente con atributo destino o un dict al guardar/cargar
+            destino = getattr(p, "destino", None) if not isinstance(p, dict) else p.get("destino")
+            if destino and str(destino).strip().lower() == nombre_est_norm:
+                bajaron += 1
+                # no añadir a pasajeros_restantes
+            else:
+                pasajeros_restantes.append(p)
         tren.pasajeros_actuales = pasajeros_restantes
 
-        # 2. Embarque (subir si la direccion coincide)
-        esperando_en_anden = estacion.clientes_esperando
-        pasajeros_embarcados = []
-        espacio_disponible = min( random.randint(1, 236), max(0, tren.capacidad - len(tren.pasajeros_actuales))
-)
+        # Embarque: suben si la dirección coincide con la dirección al destino
+        esperando = estacion.clientes_esperando
+        espacio_disponible = max(0, tren.capacidad - len(tren.pasajeros_actuales))
+        if espacio_disponible <= 0:
+            return bajaron, 0
 
-        # Precalcular nombres normalizados para mapa
-        nombres_estaciones_norm = [e.nombre.strip().lower() for e in self.estaciones_objetos]
-        try:
-            idx_actual_tren = int(tren.posicion)
-        except Exception:
-            idx_actual_tren = 0
+        nombres_est_norm = [e.nombre.strip().lower() for e in self.estaciones_objetos]
+        idx_actual = int(tren.posicion)
 
-        for cliente in list(esperando_en_anden):
+        for cliente in list(esperando):
             if espacio_disponible <= 0:
                 break
-
-            destino_cliente_norm = (getattr(cliente, 'destino', '') or '').strip().lower()
-            if not destino_cliente_norm:
+            destino = getattr(cliente, "destino", None)
+            if not destino:
                 continue
-
-            if destino_cliente_norm not in nombres_estaciones_norm:
+            destino_norm = str(destino).strip().lower()
+            if destino_norm not in nombres_est_norm:
                 continue
-
-            idx_destino = nombres_estaciones_norm.index(destino_cliente_norm)
-            destino_esta_adelante_en_mapa = idx_destino > idx_actual_tren
-            tren_se_mueve_adelante = getattr(tren, 'direccion', 1) == 1
-
-            if destino_esta_adelante_en_mapa == tren_se_mueve_adelante:
-                pasajeros_embarcados.append(cliente)
+            idx_dest = nombres_est_norm.index(destino_norm)
+            destino_adelante = idx_dest > idx_actual
+            tren_va_adelante = getattr(tren, "direccion", 1) == 1
+            if destino_adelante == tren_va_adelante:
+                # embarcar
                 try:
-                    esperando_en_anden.remove(cliente)
+                    esperando.remove(cliente)
                 except ValueError:
                     pass
-                espacio_disponible -= 1
+                tren.pasajeros_actuales.append(cliente)
                 subieron += 1
+                espacio_disponible -= 1
 
-        tren.pasajeros_actuales.extend(pasajeros_embarcados)
         return bajaron, subieron
 
-
+    # -----------------------------
+    # Movimiento de trenes (turno)
+    # -----------------------------
     def mover_trenes_ui(self):
-        # Avanza la simulacion el minimo tiempo necesario y mueve trenes.
-        # Generacion de pasajeros ahora con GeneradorPeak (opcion 1).
         if not self.simulacion_iniciada or not self.trenes_activos:
-            return 
-        
-        tiempos_restantes = [t.tiempo_restante_min for t in self.trenes_activos if t.tiempo_restante_min > 0.01]
-        
-        if not tiempos_restantes:
-            min_delta_minutes = 1 
-        else:
-            min_delta_minutes = min(tiempos_restantes)
-            min_delta_minutes = max(1, round(min_delta_minutes)) 
+            return
 
-        # Avanzar el reloj de la simulacion
+        # calcular el delta de minutos mínimo
+        tiempos = [max(0.01, t.tiempo_restante_min) for t in self.trenes_activos]
+        min_delta = 1 if not tiempos else max(1, round(min(tiempos)))
+
+        # Avanzar reloj simulado
         if self.estado_simulacion_instance:
-            self.estado_simulacion_instance.avanzar_tiempo(timedelta(minutes=min_delta_minutes))
+            self.estado_simulacion_instance.avanzar_tiempo(timedelta(minutes=min_delta))
 
-        llegadas_reportadas = []
+        llegadas_reportes = []
 
         for tren in self.trenes_activos:
-            tren.tiempo_restante_min -= min_delta_minutes
-            
+            tren.tiempo_restante_min -= min_delta
             if tren.tiempo_restante_min <= 0:
-                # Mover tren a siguiente estacion
-                tren.mover_siguiente_estacion(NUM_ESTACIONES)
-                
+                # actualizar posicion (método interno o manual)
+                # si Tren tiene mover_siguiente_estacion, úsalo; si no, aplicamos lógica:
+                if hasattr(tren, "mover_siguiente_estacion"):
+                    tren.mover_siguiente_estacion(NUM_ESTACIONES)
+                else:
+                    tren.posicion += tren.direccion
+                    if tren.posicion >= NUM_ESTACIONES - 1:
+                        tren.posicion = NUM_ESTACIONES - 1
+                        tren.direccion = -1
+                    elif tren.posicion <= 0:
+                        tren.posicion = 0
+                        tren.direccion = 1
+
                 estacion_llegada = self.estaciones_objetos[tren.posicion]
-                bajaron, subieron = self.manejar_pasajeros_estacion(tren, estacion_llegada) 
-                
-                llegadas_reportadas.append(
-                    f"{tren.nombre} llego a {estacion_llegada.nombre}. Bajan {bajaron} pasajeros, Suben {subieron} subieron. (Total a bordo: {len(tren.pasajeros_actuales)})"
+                bajaron, subieron = self.manejar_pasajeros_estacion(tren, estacion_llegada)
+
+                llegadas_reportes.append(
+                    f"{tren.nombre} llegó a {estacion_llegada.nombre}. Bajan {bajaron}, suben {subieron}. A bordo: {len(tren.pasajeros_actuales)}"
                 )
-                
-                # Calcular tiempo al siguiente tramo
-                idx_distancia = min(tren.posicion, NUM_ESTACIONES - 2)
-                distancia_al_siguiente = DISTANCIAS_KM[idx_distancia]
-                tren.calcular_tiempo_hasta_siguiente(distancia_al_siguiente)
-                
-        # Generacion de clientes con GeneradorPeak por estacion
+
+                # elegir índice de distancia para el siguiente tramo en función de la dirección
+                pos = int(tren.posicion)
+                if getattr(tren, "direccion", 1) == 1:
+                    idx_dist = min(pos, NUM_ESTACIONES - 2)
+                else:
+                    idx_dist = max(0, pos - 1)
+                distancia_siguiente = DISTANCIAS_KM[idx_dist]
+                tren.calcular_tiempo_hasta_siguiente(distancia_siguiente)
+
+        # Generación por estación (cada turno) con tasa aleatoria o usando poblacion_flotante
         for estacion in self.estaciones_objetos:
-            nuevos = estacion.generador.generar_clientes(
-                minutos=min_delta_minutes,
-                constructor=lambda _, tiempo, e=estacion: Cliente(
-                    id_cliente=random.randint(1, 9999999),  # ID único
-                    estacion_origen=e.nombre,               # Origen correcto
-                    estacion_destino=random.choice([        # Destino correcto
-                        est.nombre for est in self.estaciones_objetos
-                        if est.nombre != e.nombre
-                   ]),
-                    tiempo_creacion=tiempo                  # Fecha correcta
-    )
-)
+            # actualizar poblacion flotante entre 19%-21% cada turno (según requisito)
+            porcentaje = random.uniform(0.19, 0.21)
+            estacion.poblacion_flotante = int(estacion.poblacion_total * porcentaje)
 
-            if nuevos:
-                estacion.clientes_esperando.extend(nuevos)
+            # Generar algunos clientes por minuto (no toda la población de golpe)
+            # Usamos un generador simple: 0.002 * poblacion_flotante por minuto (ajustable)
+            tasa_por_minuto = 0.002
+            clientes_a_generar = int(estacion.poblacion_flotante * tasa_por_minuto * min_delta)
+            # Para no colapsar, cap corto; quita el min() si deseas generar al 100%
+            clientes_a_generar = min(clientes_a_generar, 500)  # cap por turno
 
-        # Refrescar UI
+            nombres_destinos = [e.nombre for e in self.estaciones_objetos if e.nombre != estacion.nombre]
+            for _ in range(clientes_a_generar):
+                destino = random.choice(nombres_destinos)
+                c = Cliente(id=random.randint(1, 99999999), estacion_origen=estacion, destino=destino)
+                estacion.clientes_esperando.append(c)
+
+        # Redibujar UI
         if self.canvas_vias:
             try:
                 self.dibujar_vias_y_estaciones(self.canvas_vias)
             except Exception:
-                # Falla en dibujado no debe romper la simulacion
                 pass
-        
-        if llegadas_reportadas:
-            messagebox.showinfo("Llegada de Tren", "\n".join(llegadas_reportadas))
 
-        if self.text_resumen_local and getattr(self.text_resumen_local, 'winfo_exists', lambda: False)():
+        if llegadas_reportes:
+            messagebox.showinfo("Llegada de Tren", "\n".join(llegadas_reportes))
+
+        if self.text_resumen_local and getattr(self.text_resumen_local, "winfo_exists", lambda: False)():
             self.actualizar_ventana_informacion_completa()
 
-
-    # --- Funciones de UI/Visualizacion ---
-
+    # -----------------------------
+    # DIBUJADO UI
+    # -----------------------------
     def dibujar_vias_y_estaciones(self, canvas: Canvas):
-        self.inicializar_trenes_activos() 
+        self.inicializar_trenes_activos()
         canvas_width = canvas.winfo_width()
         canvas_height = canvas.winfo_height()
-        if canvas_width < 10 or canvas_height < 10: 
+        if canvas_width < 10 or canvas_height < 10:
             return
 
         via_y_1 = (canvas_height / 2) - 15
         via_y_2 = (canvas_height / 2) + 15
-        
+
         canvas.delete("via")
         canvas.delete("estacion_clickable")
         canvas.delete("estacion_label")
-            
+
         canvas.create_line(50, via_y_1, canvas_width - 50, via_y_1, fill="#555", width=3, tags="via")
         canvas.create_line(50, via_y_2, canvas_width - 50, via_y_2, fill="#555", width=3, tags="via")
-        
+
         for i, x in enumerate(POSICIONES_X_ESTACIONES):
-            rect = canvas.create_rectangle(x - 15, via_y_1 - 5, x + 15, via_y_2 + 5, fill="red", outline="black", tags="estacion_clickable")
+            rect = canvas.create_rectangle(x - 15, via_y_1 - 5, x + 15, via_y_2 + 5,
+                                           fill="red", outline="black", tags="estacion_clickable")
             canvas.tag_bind(rect, "<Button-1>", lambda e, est=self.estaciones_objetos[i]: self.mostrar_info_estacion(est))
-            canvas.create_text(x, via_y_2 + 30, text=self.estaciones_objetos[i].nombre, font=("Helvetica", 9, "bold"), tags="estacion_label")
+            canvas.create_text(x, via_y_2 + 30, text=self.estaciones_objetos[i].nombre, font=("Helvetica", 9, "bold"),
+                               tags="estacion_label")
 
         canvas.delete("tren")
         canvas.delete("tren_text")
-                
+
         for tren in self.trenes_activos:
             pos_x = POSICIONES_X_ESTACIONES[tren.posicion]
             offset_y = -15 if tren.via == 1 else 15
             pos_y = canvas_height / 2 + offset_y
-            canvas.create_rectangle(pos_x-10, pos_y-5, pos_x+10, pos_y+5, fill="blue" if tren.via == 1 else "orange", tags=("tren", f"tren_{tren.id}"))
-            canvas.create_text(pos_x, pos_y, text=tren.nombre, fill="white", font=("Helvetica", 6, "bold"), tags=("tren_text", f"tren_{tren.id}_text"))
+            canvas.create_rectangle(pos_x - 10, pos_y - 5, pos_x + 10, pos_y + 5,
+                                    fill="blue" if tren.via == 1 else "orange",
+                                    tags=("tren", f"tren_{tren.id}"))
+            canvas.create_text(pos_x, pos_y, text=tren.nombre, fill="white", font=("Helvetica", 6, "bold"),
+                               tags=("tren_text", f"tren_{tren.id}_text"))
 
+    # -----------------------------
+    # INICIAR / REINICIAR
+    # -----------------------------
     def iniciar_simulacion_ui(self):
-        if self.simulacion_iniciada: return
-
-        self.inicializar_trenes_activos() 
-        self.simulacion_iniciada = True 
-        if self.btn_iniciar_simulacion_ref: 
+        if self.simulacion_iniciada:
+            return
+        self.inicializar_trenes_activos()
+        self.simulacion_iniciada = True
+        if self.btn_iniciar_simulacion_ref:
             try:
                 self.btn_iniciar_simulacion_ref.pack_forget()
-            except Exception:
+            except:
                 pass
         if self.btn_siguiente_turno_ref:
             try:
                 self.btn_siguiente_turno_ref.config(state=tk.NORMAL)
-            except Exception:
+            except:
                 pass
 
+        # panel de simulacion
         self.root.geometry("800x600")
-        if self.frame_simulacion_view: 
+        if self.frame_simulacion_view:
             try:
                 self.frame_simulacion_view.destroy()
-            except Exception:
+            except:
                 pass
-
         self.frame_simulacion_view = Frame(self.root, bg='white', padx=10, pady=10)
-        self.root.grid_columnconfigure(1, weight=1) 
-        self.frame_simulacion_view.grid(row=0, column=1, sticky="nsew") 
+        self.root.grid_columnconfigure(1, weight=1)
+        self.frame_simulacion_view.grid(row=0, column=1, sticky="nsew")
         self.canvas_vias = Canvas(self.frame_simulacion_view, bg='white', highlightthickness=0)
         self.canvas_vias.pack(fill=tk.BOTH, expand=True)
         self.canvas_vias.bind("<Configure>", lambda event: self.dibujar_vias_y_estaciones(self.canvas_vias))
         self.mostrar_ventana_informacion_completa()
 
     def reiniciar_simulacion(self):
-        if messagebox.askokcancel("Reiniciar", "¿Estás seguro de querer reiniciar la simulación a la fecha y hora original y vaciar todos los trenes y estaciones?"):
+        if messagebox.askokcancel("Reiniciar", "¿Estás seguro de reiniciar la simulación a la fecha/hora original y vaciar datos?"):
             fecha_reinicio = datetime(2015, 1, 1, 7, 0, 0)
             if self.estado_simulacion_instance:
                 self.estado_simulacion_instance.tiempo_actual_simulado = fecha_reinicio
                 try:
                     self.estado_simulacion_instance.actualizar_display()
-                except Exception:
+                except:
                     pass
-            for estacion in self.estaciones_objetos: estacion.clientes_esperando = []
+            for estacion in self.estaciones_objetos:
+                estacion.clientes_esperando = []
             self.trenes_activos = []
-            self.inicializar_trenes_activos() 
-            if self.simulacion_iniciada:
-                if self.canvas_vias:
-                    try:
-                        self.canvas_vias.delete("all")
-                        self.dibujar_vias_y_estaciones(self.canvas_vias)
-                    except Exception:
-                        pass
-                if self.btn_siguiente_turno_ref:
-                    try:
-                        self.btn_siguiente_turno_ref.config(state=tk.DISABLED)
-                    except Exception:
-                        pass
-                if self.frame_simulacion_view:
-                    try:
-                        self.frame_simulacion_view.destroy()
-                    except Exception:
-                        pass
-                if self.btn_iniciar_simulacion_ref:
-                    try:
-                        self.btn_iniciar_simulacion_ref.pack(pady=10, fill=tk.X)
-                    except Exception:
-                        pass
-                messagebox.showinfo("Reinicio Exitoso", "La simulacion ha vuelto a su estado original.")
-            self.simulacion_iniciada = False 
-            if self.text_resumen_local and getattr(self.text_resumen_local, 'winfo_exists', lambda: False)():
+            self.inicializar_trenes_activos()
+            self.simulacion_iniciada = False
+            if self.canvas_vias:
+                try:
+                    self.canvas_vias.delete("all")
+                    self.dibujar_vias_y_estaciones(self.canvas_vias)
+                except:
+                    pass
+            if self.btn_siguiente_turno_ref:
+                try:
+                    self.btn_siguiente_turno_ref.config(state=tk.DISABLED)
+                except:
+                    pass
+            if self.frame_simulacion_view:
+                try:
+                    self.frame_simulacion_view.destroy()
+                except:
+                    pass
+            if self.btn_iniciar_simulacion_ref:
+                try:
+                    self.btn_iniciar_simulacion_ref.pack(pady=10, fill=tk.X)
+                except:
+                    pass
+            if self.text_resumen_local and getattr(self.text_resumen_local, "winfo_exists", lambda: False)():
                 try:
                     self.text_resumen_local.master.master.destroy()
-                except Exception:
+                except:
                     pass
                 self.text_resumen_local = None
 
+    # -----------------------------
+    # RESUMEN / INFO
+    # -----------------------------
     def generar_texto_resumen(self):
-        resumen_texto = "--- Estado Actual de la Simulacion ---\n\n"
-        for estacion in self.estaciones_objetos: resumen_texto += estacion.obtener_resumen() + "\n" 
-        for tren in self.trenes_activos: resumen_texto += tren.obtener_resumen() + "\n"
-        return resumen_texto
-    
+        texto = "--- Estado Actual de la Simulación ---\n\n"
+        for est in self.estaciones_objetos:
+            texto += est.obtener_resumen() + "\n"
+        for tr in self.trenes_activos:
+            texto += tr.obtener_resumen() + "\n"
+        return texto
+
     def actualizar_ventana_informacion_completa(self):
-        if self.text_resumen_local and getattr(self.text_resumen_local, 'winfo_exists', lambda: False)():
-            self.text_resumen_local.config(state=tk.NORMAL)
-            self.text_resumen_local.delete(1.0, tk.END)
-            self.text_resumen_local.insert(tk.END, self.generar_texto_resumen())
-            self.text_resumen_local.config(state=tk.DISABLED)
+        if self.text_resumen_local and getattr(self.text_resumen_local, "winfo_exists", lambda: False)():
             try:
+                self.text_resumen_local.config(state=tk.NORMAL)
+                self.text_resumen_local.delete(1.0, tk.END)
+                self.text_resumen_local.insert(tk.END, self.generar_texto_resumen())
+                self.text_resumen_local.config(state=tk.DISABLED)
                 ventana_info = self.text_resumen_local.master.master
-                ventana_info.title(f"Detalles de Simulacion ({self.estado_simulacion_instance.tiempo_actual_simulado.strftime('%H:%M:%S')})")
-            except Exception:
+                ventana_info.title(f"Detalles de Simulación ({self.estado_simulacion_instance.tiempo_actual_simulado.strftime('%H:%M:%S')})")
+            except:
                 pass
-        
+
     def mostrar_ventana_informacion_completa(self):
         if self.estado_simulacion_instance is None or not self.trenes_activos:
-            messagebox.showerror("Error", "La simulacion debe estar iniciada y con trenes activos para ver detalles.")
+            messagebox.showerror("Error", "La simulación debe estar iniciada y con trenes activos para ver detalles.")
             return
-        if self.text_resumen_local and getattr(self.text_resumen_local, 'winfo_exists', lambda: False)():
+        if self.text_resumen_local and getattr(self.text_resumen_local, "winfo_exists", lambda: False)():
             self.actualizar_ventana_informacion_completa()
             try:
                 self.text_resumen_local.master.master.lift()
-            except Exception:
+            except:
                 pass
             return
+
         ventana_info = Toplevel(self.root)
-        ventana_info.title(f"Detalles de Simulacion ({self.estado_simulacion_instance.tiempo_actual_simulado.strftime('%H:%M:%S')})")
+        ventana_info.title(f"Detalles de Simulación ({self.estado_simulacion_instance.tiempo_actual_simulado.strftime('%H:%M:%S')})")
         ventana_info.geometry("500x500")
         frame_contenedor = Frame(ventana_info)
         frame_contenedor.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         scrollbar = Scrollbar(frame_contenedor)
         self.text_resumen_local = Text(frame_contenedor, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=("Courier", 10))
-        scrollbar.config(command=self.text_resumen_local.yview) 
+        scrollbar.config(command=self.text_resumen_local.yview)
         self.text_resumen_local.config(yscrollcommand=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.text_resumen_local.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.text_resumen_local.insert(tk.END, self.generar_texto_resumen())
         self.text_resumen_local.config(state=tk.DISABLED)
 
-
-    # --- Funciones de Guardado y Carga ---
-    
+    # -----------------------------
+    # Guardado / Carga
+    # -----------------------------
     def obtener_datos_para_guardar_globales(self):
-         if self.estado_simulacion_instance is None: return None
-         datos = {
+        if self.estado_simulacion_instance is None:
+            return None
+        datos = {
             'tiempo_actual_simulado': self.estado_simulacion_instance.tiempo_actual_simulado,
-            'estaciones': {e.nombre: {'clientes_esperando': e.clientes_esperando} for e in self.estaciones_objetos}, 
+            'estaciones': {e.nombre: {'clientes_esperando': e.clientes_esperando} for e in self.estaciones_objetos},
             'trenes_data': [{'id': t.id, 'nombre': t.nombre, 'energia': t.energia, 'velocidad_max': t.velocidad_max, 'capacidad': t.capacidad, 'pasajeros_actuales_list': t.pasajeros_actuales, 'posicion': t.posicion, 'via': t.via, 'direccion': t.direccion} for t in self.trenes_activos],
             'simulacion_iniciada': self.simulacion_iniciada
         }
-         return datos
+        return datos
 
     def cargar_datos_globales(self):
-        datos_cargados = cargar_datos(self.root) 
-        if datos_cargados:
-            try:
-                self.estado_simulacion_instance.tiempo_actual_simulado = datos_cargados['tiempo_actual_simulado']
-                self.estado_simulacion_instance.actualizar_display()
-                # Cargar estaciones (matching por nombre exacto; si pueden diferir por espacios, normalizamos)
-                if 'estaciones' in datos_cargados:
-                    cargadas = datos_cargados['estaciones']
-                    cargadas_norm = {k.strip(): v for k, v in cargadas.items()}
-                    for estacion_obj in self.estaciones_objetos:
-                        nombre_estacion = estacion_obj.nombre.strip()
-                        if nombre_estacion in cargadas_norm:
-                            estacion_obj.clientes_esperando = cargadas_norm[nombre_estacion]['clientes_esperando']
-                if 'trenes_data' in datos_cargados:
-                    self.trenes_activos = [] 
-                    for t_data in datos_cargados['trenes_data']:
-                        nuevo_tren = Tren(id_tren=t_data['id'], nombre=t_data['nombre'], energia=t_data['energia'], velocidad_max=t_data['velocidad_max'], capacidad=t_data['capacidad'], via=t_data['via'])
-                        nuevo_tren.pasajeros_actuales = t_data['pasajeros_actuales_list']
-                        nuevo_tren.posicion = t_data['posicion']
-                        nuevo_tren.direccion = t_data.get('direccion', 1) 
-                        idx_distancia = min(nuevo_tren.posicion, NUM_ESTACIONES - 2)
-                        distancia_al_siguiente = DISTANCIAS_KM[idx_distancia]
-                        nuevo_tren.calcular_tiempo_hasta_siguiente(distancia_al_siguiente)
-                        self.trenes_activos.append(nuevo_tren)
-                self.simulacion_iniciada = datos_cargados.get('simulacion_iniciada', False)
-                if self.simulacion_iniciada and not self.frame_simulacion_view: self.iniciar_simulacion_ui() 
-                if self.canvas_vias: self.canvas_vias.delete("all"); self.dibujar_vias_y_estaciones(self.canvas_vias)
-                print(f"Simulacion completamente actualizada a: {self.estado_simulacion_instance.tiempo_actual_simulado}")
-                self.actualizar_ventana_informacion_completa()
-            except Exception as e:
-                messagebox.showerror("Error de carga", f"Error al aplicar los datos cargados a los modelos: {e}")
+        datos_cargados = cargar_datos(self.root)
+        if not datos_cargados:
+            return
+        try:
+            # tiempo
+            if 'tiempo_actual_simulado' in datos_cargados and self.estado_simulacion_instance:
+                t = datos_cargados['tiempo_actual_simulado']
+                if isinstance(t, str):
+                    try:
+                        self.estado_simulacion_instance.tiempo_actual_simulado = datetime.strptime(t, "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        # intentar asignar tal cual
+                        self.estado_simulacion_instance.tiempo_actual_simulado = t
+                else:
+                    self.estado_simulacion_instance.tiempo_actual_simulado = t
+                try:
+                    self.estado_simulacion_instance.actualizar_display()
+                except:
+                    pass
 
-    # --- Funciones Auxiliares ---
-    
+            # estaciones
+            if 'estaciones' in datos_cargados:
+                ests = datos_cargados['estaciones']
+                for e in self.estaciones_objetos:
+                    if e.nombre in ests:
+                        e.clientes_esperando = ests[e.nombre].get('clientes_esperando', [])
+
+            # trenes
+            if 'trenes_data' in datos_cargados:
+                self.trenes_activos = []
+                for td in datos_cargados['trenes_data']:
+                    nuevo = Tren(id_tren=td['id'], nombre=td['nombre'], energia=td['energia'], velocidad_max=td['velocidad_max'], capacidad=td.get('capacidad', 236), via=td.get('via', 1))
+                    nuevo.pasajeros_actuales = td.get('pasajeros_actuales_list', [])
+                    nuevo.posicion = td.get('posicion', 0)
+                    nuevo.direccion = td.get('direccion', 1)
+                    idx = min(nuevo.posicion, NUM_ESTACIONES - 2)
+                    distancia = DISTANCIAS_KM[idx]
+                    nuevo.calcular_tiempo_hasta_siguiente(distancia)
+                    self.trenes_activos.append(nuevo)
+
+            self.simulacion_iniciada = datos_cargados.get('simulacion_iniciada', False)
+            if self.simulacion_iniciada:
+                self.iniciar_simulacion_ui()
+            if self.canvas_vias:
+                try:
+                    self.canvas_vias.delete("all")
+                    self.dibujar_vias_y_estaciones(self.canvas_vias)
+                except:
+                    pass
+
+            self.actualizar_ventana_informacion_completa()
+        except Exception as e:
+            messagebox.showerror("Error de carga", f"Error al aplicar datos cargados: {e}")
+
+    # -----------------------------
+    # Funciones auxiliares / UI pequeñas
+    # -----------------------------
     def salir_app(self):
-        if messagebox.askokcancel("Salir", "¿Estas seguro de querer salir?"): self.root.destroy()
-    
+        if messagebox.askokcancel("Salir", "¿Estás seguro de querer salir?"):
+            self.root.destroy()
+
     def mostrar_info_estacion(self, estacion):
-        messagebox.showinfo(f"Info Estacion: {estacion.nombre}", estacion.obtener_resumen())
-            
-    def mostrar_info_estaciones(self): 
-        info = "\n\n".join([e.obtener_resumen() for e in self.estaciones_objetos]) 
+        try:
+            messagebox.showinfo(f"Info Estacion: {estacion.nombre}", estacion.obtener_resumen())
+        except Exception:
+            messagebox.showinfo("Info Estacion", str(estacion))
+
+    def mostrar_info_estaciones(self):
+        info = "\n\n".join([e.obtener_resumen() for e in self.estaciones_objetos])
         messagebox.showinfo("Acerca de Estaciones", info)
-        
-    def mostrar_info_trenes(self): 
+
+    def mostrar_info_trenes(self):
         info = "\n\n".join([t.obtener_resumen() for t in self.trenes_activos])
         messagebox.showinfo("Acerca de Trenes", info if info else "No hay trenes activos para mostrar.")
-        
+
+    # -----------------------------
+    # Generar poblacion (boton)
+    # -----------------------------
     def generar_poblacion_ui(self):
-        if not self.simulacion_iniciada: messagebox.showerror("Error", "Debes iniciar la simulacion primero."); return
-        resumen_total = ""
-        for e in self.estaciones_objetos: 
-            nuevos = e.generador.generar_clientes(
-                minutos=60,
-                constructor=lambda _, tiempo, est=e: Cliente(
-                    None,
-                    tiempo,
-                    est.nombre,
-                    destino=random.choice([es.nombre for es in self.estaciones_objetos if es.nombre != est.nombre])
-                )
-            )
-            e.clientes_esperando.extend(nuevos)
-            resumen_total += f"{e.nombre}: {len(e.clientes_esperando)} clientes esperando ahora.\n"
-        messagebox.showinfo("Poblacion Generada/Actualizada", resumen_total)
+        if not self.simulacion_iniciada:
+            messagebox.showerror("Error", "Debes iniciar la simulación primero.")
+            return
+
+        # Para cada estación: generar entre 19% y 21% de su población flotante (tope por seguridad)
+        resumen = ""
+        MAX_GENERAR = 5000  # tope por estación para no colapsar (ajustable)
+
+        for est in self.estaciones_objetos:
+            min_c = int(est.poblacion_total * 0.19)
+            max_c = int(est.poblacion_total * 0.21)
+            cantidad = random.randint(min_c, max_c)
+
+            # POR SEGURIDAD: cap
+            if cantidad > MAX_GENERAR:
+                cantidad_a_crear = MAX_GENERAR
+            else:
+                cantidad_a_crear = cantidad
+
+            destinos = [e.nombre for e in self.estaciones_objetos if e.nombre != est.nombre]
+            for i in range(cantidad_a_crear):
+                destino = random.choice(destinos)
+                c = Cliente(id=random.randint(1, 99999999), estacion_origen=est, destino=destino)
+                est.clientes_esperando.append(c)
+
+            resumen += f"{est.nombre}: ahora {len(est.clientes_esperando)} clientes esperando (se generaron {cantidad_a_crear}).\n"
+
+        messagebox.showinfo("Población Generada/Actualizada", resumen)
         self.actualizar_ventana_informacion_completa()
 
+    # -----------------------------
+    # Ventana renombrar estaciones
+    # -----------------------------
     def abrir_ventana_renombrar_estaciones(self):
-        if not self.simulacion_iniciada: messagebox.showerror("Error", "Debes iniciar la simulacion primero para usar esta funcion."); return
+        if not self.simulacion_iniciada:
+            messagebox.showerror("Error", "Debes iniciar la simulación primero para usar esta función.")
+            return
         ventana = Toplevel(self.root)
         ventana.title("Renombrar Estaciones")
         ventana.geometry("300x250")
-        tk.Label(ventana, text="Selecciona estacion:").pack(pady=5)
+        tk.Label(ventana, text="Selecciona estación:").pack(pady=5)
         variable = tk.StringVar(ventana)
         opciones = [e.nombre for e in self.estaciones_objetos]
-        if opciones: variable.set(opciones)
+        if opciones:
+            variable.set(opciones[0])
         menu = tk.OptionMenu(ventana, variable, *opciones)
         menu.pack(pady=5)
         tk.Label(ventana, text="Nuevo nombre:").pack(pady=5)
         entry_nombre = tk.Entry(ventana)
         entry_nombre.pack(pady=5)
+
         def aplicar_cambio():
             nombre_actual = variable.get()
             nuevo = entry_nombre.get().strip()
-            if not nuevo: messagebox.showerror("Error de ingreso", "Debes escribir un nombre valido."); return
-            if nuevo in [e.nombre for e in self.estaciones_objetos]: messagebox.showerror("Error de ingreso", f"La estacion '{nuevo}' ya existe."); return
+            if not nuevo:
+                messagebox.showerror("Error de ingreso", "Debes escribir un nombre válido.")
+                return
+            if nuevo in [e.nombre for e in self.estaciones_objetos]:
+                messagebox.showerror("Error de ingreso", f"La estación '{nuevo}' ya existe.")
+                return
             for e in self.estaciones_objetos:
-                if e.nombre == nombre_actual: e.nombre = nuevo
-            if self.canvas_vias: self.canvas_vias.delete("all"); self.dibujar_vias_y_estaciones(self.canvas_vias) 
-            messagebox.showinfo("Exito", f"Nombre cambiado a:\n{nuevo}")
+                if e.nombre == nombre_actual:
+                    e.nombre = nuevo
+            if self.canvas_vias:
+                try:
+                    self.canvas_vias.delete("all")
+                    self.dibujar_vias_y_estaciones(self.canvas_vias)
+                except:
+                    pass
+            messagebox.showinfo("Éxito", f"Nombre cambiado a: {nuevo}")
             self.actualizar_ventana_informacion_completa()
             ventana.destroy()
+
         tk.Button(ventana, text="Aplicar", command=aplicar_cambio).pack(pady=10)
-        
+
+    # -----------------------------
+    # Eventos adicionales + aumentar velocidad
+    # -----------------------------
     def abrir_menu_eventos_adicionales(self):
         if not self.simulacion_iniciada:
-            messagebox.showerror("Error", "Debes iniciar la simulacion primero para usar los eventos.")
+            messagebox.showerror("Error", "Debes iniciar la simulación primero para usar los eventos.")
             return
         menu_eventos_window = Toplevel(self.root)
         menu_eventos_window.title("Eventos Adicionales")
         Button(menu_eventos_window, text="Aumentar Velocidad de Tren", command=self.menu_aumentar_velocidad).pack(pady=10)
-        
+
     def menu_aumentar_velocidad(self):
         if not self.trenes_activos:
             messagebox.showerror("Error", "No hay trenes activos.")
@@ -501,51 +579,71 @@ class SimulacionApp:
         ventana = Toplevel(self.root)
         ventana.title("Aumentar Velocidad")
         for tren in self.trenes_activos:
-            Button(ventana, text=f"{tren.nombre} (Actual: {tren.velocidad_max} km/h)", command=lambda t=tren: self.aplicar_aumento_velocidad(t, ventana)).pack(pady=5)
-        
+            # Mostrar velocidad_actual si existe, sino velocidad_max
+            vel_actual = getattr(tren, "velocidad_actual", getattr(tren, "velocidad_max", 0))
+            Button(ventana, text=f"{tren.nombre} (Actual: {vel_actual} km/h)", command=lambda t=tren: self.aplicar_aumento_velocidad(t, ventana)).pack(pady=5)
+
     def aplicar_aumento_velocidad(self, tren, ventana):
-        tren.velocidad_max += 20
-        messagebox.showinfo("Velocidad Ampliada", f"La nueva velocidad del tren {tren.nombre} es {tren.velocidad_max} km/h")
-        idx_distancia = min(tren.posicion, NUM_ESTACIONES - 2)
-        distancia_al_siguiente = DISTANCIAS_KM[idx_distancia]
-        tren.calcular_tiempo_hasta_siguiente(distancia_al_siguiente)
-        self.actualizar_ventana_informacion_completa()
+        # Aumenta velocidad_actual sin cambiar velocidad_max
+        nueva = getattr(tren, "velocidad_actual", None)
+        if nueva is None:
+            nueva = getattr(tren, "velocidad_max", 0)
+        nueva = nueva + 20
+        if nueva > tren.velocidad_max:
+            nueva = tren.velocidad_max
+        tren.velocidad_actual = nueva
+
+        # Recalcular tiempo al siguiente tramo teniendo en cuenta dirección
+        pos = int(tren.posicion)
+        if getattr(tren, "direccion", 1) == 1:
+            idx = min(pos, NUM_ESTACIONES - 2)
+        else:
+            idx = max(0, pos - 1)
+        distancia = DISTANCIAS_KM[idx]
+        tren.calcular_tiempo_hasta_siguiente(distancia)
+
+        messagebox.showinfo("Velocidad Ampliada", f"La velocidad actual del tren {tren.nombre} es {tren.velocidad_actual} km/h (máx {tren.velocidad_max}).")
         ventana.destroy()
+        self.actualizar_ventana_informacion_completa()
 
-
-    # --- Configuracion Principal de la Interfaz ---
+    # -----------------------------
+    # Configuración principal de la interfaz (panel izquierdo)
+    # -----------------------------
     def configurar_interfaz_principal(self):
         self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(0, weight=0) 
-        self.root.grid_columnconfigure(1, weight=1) 
+        self.root.grid_columnconfigure(0, weight=0)
+        self.root.grid_columnconfigure(1, weight=1)
+
         self.frame_control = Frame(self.root, bg='#f0f0f0', width=200, padx=10, pady=10, relief=tk.RAISED)
         self.frame_control.grid(row=0, column=0, sticky="nsew")
         self.frame_control.grid_propagate(False)
-        # Creamos EstadoDeSimulacion dentro del panel (tu clase maneja la fecha/hora)
+
+        # Estado de simulacion (reloj)
         try:
             self.estado_simulacion_instance = EstadoSimulacion(master=self.frame_control)
             self.estado_simulacion_instance.pack(pady=10, fill=tk.X)
         except Exception:
-            # En caso de fallo con la clase de estado, la dejamos como None pero no rompemos la UI
             self.estado_simulacion_instance = None
 
-        self.btn_iniciar_simulacion_ref = Button(self.frame_control, text="Iniciar Simulacion", font=("Helvetica", 12, "bold"), bg="green", fg="white", width=20, height=2, command=self.iniciar_simulacion_ui)
+        self.btn_iniciar_simulacion_ref = Button(self.frame_control, text="Iniciar Simulación", font=("Helvetica", 12, "bold"), bg="green", fg="white", width=20, height=2, command=self.iniciar_simulacion_ui)
         self.btn_iniciar_simulacion_ref.pack(pady=10, fill=tk.X)
+
         self.btn_siguiente_turno_ref = Button(self.frame_control, text="Siguiente Turno", width=20, height=2, state=tk.DISABLED, command=self.mover_trenes_ui)
         self.btn_siguiente_turno_ref.pack(pady=10, fill=tk.X)
+
         Button(self.frame_control, text="Guardar Estado", width=20, command=lambda: guardar_datos(self.obtener_datos_para_guardar_globales(), self.root)).pack(pady=5, fill=tk.X)
         Button(self.frame_control, text="Cargar Estado", width=20, command=self.cargar_datos_globales).pack(pady=5, fill=tk.X)
         Frame(self.frame_control, height=2, bg='gray').pack(fill='x', pady=10)
-        Button(self.frame_control, text="Reiniciar Simulacion", width=20, command=self.reiniciar_simulacion).pack(pady=5, fill=tk.X)
+        Button(self.frame_control, text="Reiniciar Simulación", width=20, command=self.reiniciar_simulacion).pack(pady=5, fill=tk.X)
         Button(self.frame_control, text="Eventos Adicionales", width=20, command=self.abrir_menu_eventos_adicionales).pack(pady=5, fill=tk.X)
         Button(self.frame_control, text="Renombrar Estaciones", width=20, command=self.abrir_ventana_renombrar_estaciones).pack(pady=5, fill=tk.X)
-        Button(self.frame_control, text="Generar Poblacion (Test)", width=20, command=self.generar_poblacion_ui).pack(pady=5, fill=tk.X) 
+        Button(self.frame_control, text="Generar Población (Test)", width=20, command=self.generar_poblacion_ui).pack(pady=5, fill=tk.X)
         Frame(self.frame_control, height=2, bg='gray').pack(fill='x', pady=10)
         Button(self.frame_control, text="Acerca de Estaciones", width=20, command=self.mostrar_info_estaciones).pack(pady=5, fill=tk.X)
-        Button(self.frame_control, text="Acerca de Trenes", width=20, command=self.mostrar_info_trenes).pack(pady=5, fill=tk.X) 
-        Frame(self.frame_control, bg='#f0f0f0').pack(fill=tk.BOTH, expand=True) 
+        Button(self.frame_control, text="Acerca de Trenes", width=20, command=self.mostrar_info_trenes).pack(pady=5, fill=tk.X)
+        Frame(self.frame_control, bg='#f0f0f0').pack(fill=tk.BOTH, expand=True)
         Button(self.frame_control, text="Salir", width=20, bg='red', fg='white', command=self.salir_app).pack(pady=10, padx=10, fill=tk.X)
-        
+
 
 # -- MAIN EXECUTION BLOCK (Fuera de la clase) -- #
 
