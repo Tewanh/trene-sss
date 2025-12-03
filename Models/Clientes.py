@@ -43,3 +43,4 @@ def generar_clientes_estacion(estacion):
             destino=None  # Puedes asignar destino después según tu lógica
         )
         estacion.clientes_esperando.append(cliente)
+
