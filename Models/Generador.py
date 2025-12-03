@@ -91,3 +91,4 @@ class GeneradorPeak(Generador):
             self.current_datetime = tiempo
 
         return lista
+
