@@ -1,73 +1,93 @@
 # Models/Trenes.py
-import random
+from datetime import datetime, timedelta
 
 class Tren:
-    """Representa un tipo de tren con sus características y estado actual."""
-    
     def __init__(self, id_tren: int, nombre: str, energia: str, velocidad_max: int, capacidad: int = None, via: int = 1):
         self.id = id_tren
         self.nombre = nombre
         self.energia = energia
         self.velocidad_max = velocidad_max
         self.capacidad = capacidad if capacidad is not None else 236
-        self.posicion = 0 # Índice de la estación actual (0 a 3)
-        self.via = via    
-        self.canvas_id = None 
+        self.posicion = 0
+        self.via = via
 
-        # self.pasajeros_actuales pasa de ser un entero a una lista de objetos Cliente (inicialmente vacía)
-        self.pasajeros_actuales = [] # <--- MODIFICACIÓN
-        self.tiempo_restante_min = 0 
-        # NUEVO: 1 = hacia adelante (estación 0 -> 3), -1 = hacia atrás (estación 3 -> 0)
-        self.direccion = 1 
+        # Lista de clientes dentro del tren
+        self.pasajeros_actuales = []
 
+        # Tiempo restante para llegar a la siguiente estación (minutos)
+        self.tiempo_restante_min = 0.0
+
+        # Dirección: 1 hacia adelante, -1 hacia atrás
+        self.direccion = 1
+
+        # --- VELOCIDAD REAL (no máxima) ---
+        # Iniciar con una velocidad razonable (no 0 y no la máxima).
+        # Usamos la mitad de la velocidad máxima o al menos 10 km/h para que el tren avance.
+        self.velocidad_actual = max(10, int(self.velocidad_max * 0.5))
+
+    # -------------------------------------------------------
+    #  CÁLCULO DE TIEMPO USANDO velocidad_actual
+    # -------------------------------------------------------
     def calcular_tiempo_hasta_siguiente(self, distancia_km: float):
-        if self.velocidad_max <= 0:
-            self.tiempo_restante_min = 0.0
-            return 0.0
-        else:
-            tiempo_total_viaje_min = (distancia_km / self.velocidad_max) * 60
-            self.tiempo_restante_min = tiempo_total_viaje_min
-            return tiempo_total_viaje_min
+        """
+        Calcula el tiempo estimado en minutos para llegar a la siguiente estación,
+        basado en velocidad_actual (NO velocidad_max). Evita división por cero.
+        """
+        vel = max(1, self.velocidad_actual)  # evitar división por cero
+        tiempo_total_viaje_min = (distancia_km / vel) * 60.0
+        self.tiempo_restante_min = tiempo_total_viaje_min
+        return tiempo_total_viaje_min
 
-    def mover_siguiente_estacion(self, num_estaciones_totales: int):
+    # -------------------------------------------------------
+    #  ACTUALIZACIÓN DE POSICIÓN (reducción del tiempo restante)
+    # -------------------------------------------------------
+    def actualizar_posicion(self):
         """
-        Calcula la nueva posición del tren y cambia la dirección si llega al final.
-        num_estaciones_totales debe ser 4 en tu caso.
+        Reduce el tiempo de viaje 1 minuto (llamado por la simulación por cada minuto).
+        Si el tiempo llega a 0 o menos, avanza a la siguiente estación de acuerdo a self.direccion.
         """
-        
-        if self.direccion == 1:
-            # Moviéndose hacia adelante: 0 -> 1 -> 2 -> 3
-            if self.posicion == num_estaciones_totales - 1:
-                # Llegó a la última estación, cambia de dirección
+        # Se espera que la función que llama a actualizar_posicion lo haga en incrementos de 1 minuto.
+        self.tiempo_restante_min -= 1.0
+
+        if self.tiempo_restante_min <= 0:
+            # Llegada: mover posición física según dirección
+            self.posicion += self.direccion
+
+            # Si tocó extremos, forzamos límites y cambiamos dirección
+            # Nota: la simulación (interfaz) usa NUM_ESTACIONES = 4 (0..3)
+            if self.posicion >= 3:
+                self.posicion = 3
                 self.direccion = -1
-                self.posicion -= 1
-            else:
-                self.posicion += 1
-        else:
-            # Moviéndose hacia atrás: 3 -> 2 -> 1 -> 0
-            if self.posicion == 0:
-                # Llegó a la primera estación, cambia de dirección
+            elif self.posicion <= 0:
+                self.posicion = 0
                 self.direccion = 1
-                self.posicion += 1
-            else:
-                self.posicion -= 1
-        
-        # Opcional: Cambiar la vía si cambian de dirección para una mejor visualización
-        # self.via = 1 if self.direccion == 1 else 2
 
+    # -------------------------------------------------------
+    #  METODO PARA AUMENTAR VELOCIDAD (INTERFAZ)
+    # -------------------------------------------------------
+    def aumentar_velocidad_actual(self, incremento=10):
+        """
+        Aumenta la velocidad_actual sin pasar de velocidad_max.
+        """
+        nueva = self.velocidad_actual + incremento
+        if nueva > self.velocidad_max:
+            nueva = self.velocidad_max
+        self.velocidad_actual = nueva
 
-    def obtener_resumen(self) -> str:
-        """Devuelve un string formateado con los datos principales del tren."""
-        resumen = (
-            f"--- {self.nombre} (ID: {self.id}) ---\n"
-            f"⚡ Energía: {self.energia}\n"
-            f"🚀 Velocidad máxima: {self.velocidad_max} km/h\n"
+    # -------------------------------------------------------
+    #  Resumen para interfaz
+    # -------------------------------------------------------
+    def obtener_resumen(self):
+        return (
+            f"Tren {self.nombre} (ID {self.id})\n"
+            f"  Energía: {self.energia}\n"
+            f"  Velocidad máxima: {self.velocidad_max} km/h\n"
+            f"  Velocidad actual: {self.velocidad_actual} km/h\n"
+            f"  Capacidad: {self.capacidad}\n"
+            f"  Pasajeros a bordo: {len(self.pasajeros_actuales)}\n"
+            f"  Vía: {self.via}\n"
+            f"  Posición: {self.posicion}\n"
+            f"  Dirección: {'→' if self.direccion == 1 else '←'}\n"
         )
-        resumen += f"👥 Capacidad: {self.capacidad} pasajeros\n"
-        resumen += f"🚶 Pasajeros actuales: {len(self.pasajeros_actuales)}\n" # <--- MODIFICACIÓN: Usamos len()
-        resumen += f"⏱️ Tiempo restante para llegar: {self.tiempo_restante_min:.1f} min\n"
-        resumen += f"🔄 Dirección: {'Adelante' if self.direccion == 1 else 'Atrás'}\n"
-        
-        return resumen
 
 
