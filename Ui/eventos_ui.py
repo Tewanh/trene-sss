@@ -56,3 +56,4 @@ def manejar_reinicio_estado(ventana_eventos, aplicar_estado_callback):
         aplicar_estado_callback(datos_reinicio)
         messagebox.showinfo("Reinicio Exitoso", "La simulación ha vuelto a su estado original.")
         ventana_eventos.destroy()
+
